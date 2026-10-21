@@ -1,0 +1,273 @@
+import { describe, expect, it } from 'vitest';
+import {
+  DEV_CARD_KINDS, DEV_DECK_SIZE, canAfford, costFor, PIECE_LIMITS, RESOURCES, ROLE_LIST, applyAction, bankStockFor, createGame, legalBankTrades,
+  legalCityVertices, legalDevPlays, legalRoadEdges, legalRobberTiles, legalRoleActions, legalSettlementVertices, legalStealVictims,
+  longestRoadFor, publicPoints, topologyOf, totalPoints, validate, viewFor,
+  type Action, type GameEvent, type GameMode, type GameState, type Hand, type Rng,
+} from '../src';
+import { mulberry32 } from './helpers';
+import { chooseWeighted, moves, pick } from '../sim/bot';
+import { greedyMoves } from '../sim/greedy';
+
+/* ---------------- invariants (plain throws: cheap enough to run every step) ---------------- */
+
+const must = (cond: boolean, msg: string) => {
+  if (!cond) throw new Error(`invariant broken: ${msg}`);
+};
+
+/** Points recomputed from the pieces with code that shares nothing with scoring.ts. */
+function independentPublicPoints(s: GameState, pid: string): number {
+  let vp = 0;
+  for (const v in s.buildings) if (s.buildings[v].owner === pid) vp += s.buildings[v].kind === 'city' ? 2 : 1;
+  if (s.longestRoad.holder === pid) vp += 2;
+  if (s.largestArmy.holder === pid) vp += 2;
+  return vp;
+}
+
+function invariants(s: GameState) {
+  const n = s.players.length;
+  const stock = bankStockFor(s.mode, n);
+  const topo = topologyOf(s.map);
+
+  for (const r of RESOURCES) {
+    must(s.bank[r] >= 0, `bank ${r} negative`);
+    let total = s.bank[r];
+    for (const p of s.players) {
+      must(p.hand[r] >= 0, `${p.id} has negative ${r}`);
+      total += p.hand[r];
+    }
+    must(total === stock, `${r} total ${total} != stock ${stock}`);
+  }
+
+  const held = s.players.reduce((a, p) => a + p.devCards.length, 0);
+  const played = DEV_CARD_KINDS.reduce((a, k) => a + s.devPlayed[k], 0);
+  must(s.devDeck.length + held + played === DEV_DECK_SIZE, `dev cards ${s.devDeck.length}+${held}+${played} != ${DEV_DECK_SIZE}`);
+  must(s.devPlayed.victoryPoint === 0, 'a victory point card was played');
+  must(s.players.reduce((a, p) => a + p.knightsPlayed, 0) === s.devPlayed.knight, 'knight counts disagree');
+
+  const ids = new Set(s.players.map((p) => p.id));
+  const counts: Record<string, { road: number; settlement: number; city: number }> = {};
+  for (const p of s.players) counts[p.id] = { road: 0, settlement: 0, city: 0 };
+  for (const e in s.roads) {
+    must(Number(e) < topo.edges.length && ids.has(s.roads[e]), 'bad road');
+    counts[s.roads[e]].road++;
+  }
+  for (const v in s.buildings) {
+    const b = s.buildings[v];
+    must(Number(v) < topo.vertices.length && ids.has(b.owner), 'bad building');
+    counts[b.owner][b.kind]++;
+    for (const nb of topo.vertices[Number(v)].neighbors) must(s.buildings[nb] === undefined, 'distance rule broken');
+  }
+  for (const p of s.players) {
+    must(counts[p.id].road <= PIECE_LIMITS.road, `${p.id} road limit`);
+    must(counts[p.id].settlement <= PIECE_LIMITS.settlement, `${p.id} settlement limit`);
+    must(counts[p.id].city <= PIECE_LIMITS.city, `${p.id} city limit`);
+  }
+
+  // longest road: holder needs >= 5 and the maximum; with no holder no one may stand alone at >= 5
+  const longRoads = s.players.map((p) => counts[p.id].road >= 5);
+  const lens = s.players.map((p, i) => (longRoads[i] ? longestRoadFor(s, p.id) : 0)); // under 5 roads the length cannot reach 5
+  const max = Math.max(...lens);
+  if (s.longestRoad.holder) {
+    const hl = lens[s.players.findIndex((p) => p.id === s.longestRoad.holder)];
+    must(hl >= 5, 'longest road holder has fewer than 5');
+    must(hl === max, 'longest road holder is not the longest');
+  } else if (max >= 5) {
+    must(lens.filter((l) => l === max).length > 1, 'a unique longest road >= 5 has no holder');
+  }
+
+  const maxKnights = Math.max(...s.players.map((p) => p.knightsPlayed));
+  if (s.largestArmy.holder) {
+    const k = s.players.find((p) => p.id === s.largestArmy.holder)!.knightsPlayed;
+    must(k >= 3 && k === maxKnights && s.largestArmy.size === k, 'largest army holder inconsistent');
+  } else {
+    must(maxKnights < 3, 'a player has 3+ knights but no army');
+  }
+
+  for (const p of s.players) {
+    must(publicPoints(s, p.id) === independentPublicPoints(s, p.id), `points of ${p.id} do not match the pieces`);
+    must(totalPoints(s, p.id) === independentPublicPoints(s, p.id) + p.devCards.filter((c) => c.kind === 'victoryPoint').length, 'hidden points');
+  }
+
+  // phase bookkeeping
+  must(ids.has(s.current), 'current player exists');
+  must((s.phase === 'discard') === (Object.keys(s.pendingDiscards).length > 0), 'pendingDiscards vs phase');
+  must((s.phase === 'steal') === (s.stealFrom.length > 0), 'stealFrom vs phase');
+  must((s.phase === 'roadBuilding') === (s.roadBuildingLeft > 0), 'roadBuildingLeft vs phase');
+  must((['discard', 'robber', 'steal', 'roadBuilding'] as string[]).includes(s.phase) === (s.returnPhase !== null), 'returnPhase vs phase');
+  must((s.turnFlags.counters.capture ?? 0) <= 1, 'more than one capture in a turn');
+  must(s.robber >= 0 && s.robber < s.tiles.length && s.tiles[s.robber] !== undefined, 'robber tile');
+  must((s.phase === 'finished') === (s.winner !== null), 'winner vs phase');
+  if (s.winner) must(totalPoints(s, s.winner) >= s.vpToWin, 'winner below the target');
+  if (s.phase !== 'finished' && s.phase !== 'setup') {
+    // nobody sits on the target during their own turn without having won
+    must(totalPoints(s, s.current) < s.vpToWin, 'current player at the target but game not finished');
+  }
+}
+
+/**
+ * The dice event's tile lists must match the board as everyone can see it
+ * (numbers, robber, buildings): they add nothing a client could not work out, and
+ * every producing player must have a building on a listed tile.
+ */
+function checkRollTiles(after: GameState, events: GameEvent[], stats: Stats) {
+  const rolled = events.find((e) => e.type === 'diceRolled');
+  if (!rolled || rolled.type !== 'diceRolled') return;
+  const topo = topologyOf(after.map);
+  const expectHit: number[] = [];
+  let expectRobbed: number | null = null;
+  after.tiles.forEach((t, i) => {
+    if (t.kind === 'desert' || t.number !== rolled.total) return;
+    if (i === after.robber) expectRobbed = i;
+    else if (topo.tiles[i].corners.some((v) => after.buildings[v])) expectHit.push(i);
+  });
+  must(JSON.stringify(rolled.hitTiles) === JSON.stringify(expectHit), 'hitTiles do not match the public board');
+  must(rolled.robbedTile === expectRobbed, 'robbedTile does not match the public board');
+  must(Object.keys(rolled).sort().join() === 'dice,hitTiles,player,robbedTile,total,type', 'diceRolled carries unexpected fields');
+  if (rolled.total === 7) must(rolled.hitTiles.length === 0 && rolled.robbedTile === null, 'a seven hits no tile');
+  for (const e of events) {
+    if (e.type !== 'produced') continue;
+    const touches = rolled.hitTiles.some((i) => topo.tiles[i].corners.some((v) => after.buildings[v]?.owner === e.player));
+    must(touches, 'a player produced without a building on a hit tile');
+  }
+  stats.hits += rolled.hitTiles.length;
+  if (rolled.robbedTile !== null) stats.robbed++;
+}
+
+/* ---------------- one game ---------------- */
+
+interface Stats {
+  games: number;
+  finished: number;
+  steps: number;
+  byType: Record<string, number>;
+  roleWins: Record<string, number>;
+  rolePlays: Record<string, number>;
+  stolen: number;
+  captured: number;
+  blocked: number;
+  hits: number;
+  robbed: number;
+  refusedProbes: number;
+}
+
+const newStats = (): Stats => ({ games: 0, finished: 0, steps: 0, byType: {}, roleWins: {}, rolePlays: {}, stolen: 0, captured: 0, blocked: 0, hits: 0, robbed: 0, refusedProbes: 0 });
+
+const BAD_PROBES: unknown[] = [
+  { type: 'placeSettlement', vertex: -1 }, { type: 'placeRoad', edge: 99999 }, { type: 'bankTrade', give: 'gold', get: 'ore' },
+  { type: 'discard', resources: { ore: -2 } }, { type: 'roleAction', name: '__proto__' }, { type: 'steal', victim: 'nobody' },
+  { type: 'acceptTrade', offerId: 12345 }, null, 'roll', { type: 'upgradeCity', vertex: 0.5 },
+];
+
+function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxSteps = 5000, bot = moves): GameState {
+  const rng = mulberry32(seed * 7919 + n);
+  const roles = ROLE_LIST.map((r) => r.id);
+  const shift = seed % roles.length;
+  const chosen = Array.from({ length: n }, (_, i) => roles[(shift + i) % roles.length]);
+  const created = createGame({ players: chosen.map((role, i) => ({ id: `p${i}`, name: `P${i}`, role })), mode }, rng);
+  must(created.ok, 'createGame failed');
+  let s = (created as { ok: true; state: GameState }).state;
+  invariants(s);
+
+  let actionsThisTurn = 0;
+  let lastTurn = s.turn;
+  for (let step = 0; step < maxSteps && s.phase !== 'finished'; step++) {
+    const ms = bot(s, rng, actionsThisTurn);
+    must(ms.length > 0, `stuck in phase ${s.phase}`);
+    const m = chooseWeighted(ms, rng);
+
+    // the validator and the reducer must agree, and a refusal must leave the state untouched
+    const checkPurity = step % 10 === 0;
+    const before = checkPurity ? JSON.stringify(s) : '';
+    const verdict = validate(s, m.pid, m.action);
+    const r = applyAction(s, m.pid, m.action, rng);
+    must(verdict === null, `a listed move failed validation: ${JSON.stringify(m.action)} -> ${JSON.stringify(verdict)}`);
+    must(r.ok, `a validated move was refused: ${JSON.stringify(m.action)} ${JSON.stringify((r as { error?: unknown }).error)}`);
+    if (checkPurity) must(JSON.stringify(s) === before, 'applyAction mutated its input');
+    if (!r.ok) throw new Error('unreachable');
+    s = r.state;
+    stats.steps++;
+    stats.byType[m.action.type] = (stats.byType[m.action.type] ?? 0) + 1;
+    if (m.action.type === 'roleAction') stats.byType[`role:${m.action.name}`] = (stats.byType[`role:${m.action.name}`] ?? 0) + 1;
+    checkRollTiles(s, r.events, stats);
+    for (const e of r.events) {
+      if (e.type === 'stolen') stats.stolen++;
+      if (e.type === 'captured') stats.captured++;
+      if (e.type === 'productionBlocked') stats.blocked++;
+    }
+    invariants(s);
+
+    if (s.turn !== lastTurn) {
+      lastTurn = s.turn;
+      actionsThisTurn = 0;
+    } else actionsThisTurn++;
+
+    if (step % 17 === 0) {
+      const probe = pick(BAD_PROBES, rng);
+      const bad = applyAction(s, pick(s.players, rng).id, probe as Action, rng);
+      must(!bad.ok, `malformed action accepted: ${JSON.stringify(probe)}`);
+      stats.refusedProbes++;
+    }
+    if (step % 150 === 0) {
+      must(JSON.stringify(JSON.parse(JSON.stringify(s))) === JSON.stringify(s), 'state is not plain JSON');
+      for (const p of s.players) must(viewFor(s, p.id).me === p.id, 'view');
+    }
+  }
+  stats.games++;
+  for (const p of s.players) stats.rolePlays[p.role] = (stats.rolePlays[p.role] ?? 0) + 1;
+  if (s.phase === 'finished') {
+    stats.finished++;
+    const w = s.players.find((p) => p.id === s.winner)!;
+    stats.roleWins[w.role] = (stats.roleWins[w.role] ?? 0) + 1;
+  }
+  return s;
+}
+
+describe('random playouts', () => {
+  it('keeps every invariant over hundreds of bot games (2-5 players, all roles, both modes)', () => {
+    const stats = newStats();
+    let seed = 1;
+    for (const mode of ['standard', 'short'] as GameMode[]) {
+      for (let n = 2; n <= 5; n++) {
+        const games = 25;
+        for (let g = 0; g < games; g++) playGame(seed++, n, mode, stats);
+      }
+    }
+    // the bot must have exercised every kind of action, otherwise the run proves little
+    for (const t of [
+      'placeSettlement', 'placeRoad', 'upgradeCity', 'roll', 'discard', 'moveRobber', 'steal', 'bankTrade', 'offerTrade', 'acceptTrade',
+      'buyDevCard', 'playKnight', 'playRoadBuilding', 'playYearOfPlenty', 'playMonopoly', 'endTurn', 'role:capture',
+    ]) {
+      if (!stats.byType[t]) throw new Error(`the bot never played ${t}`);
+    }
+    for (const r of ROLE_LIST) if (!stats.rolePlays[r.id]) throw new Error(`role ${r.id} never played`);
+    expect(stats.games).toBe(200);
+    expect(stats.finished).toBeGreaterThan(stats.games * 0.5);
+    expect(stats.stolen).toBeGreaterThan(0);
+    expect(stats.captured).toBeGreaterThan(0);
+    expect(stats.blocked).toBeGreaterThan(0);
+    expect(stats.hits).toBeGreaterThan(0);
+    expect(stats.robbed).toBeGreaterThan(0);
+    if (process.env.FUZZ_REPORT) console.log(JSON.stringify(stats, null, 1));
+  }, 120_000);
+
+  it('keeps every invariant when greedy bots play (they build, trade, capture and rob on purpose)', () => {
+    const stats = newStats();
+    let seed = 5000;
+    for (const mode of ['standard', 'short'] as GameMode[]) {
+      for (let n = 2; n <= 5; n++) for (let g = 0; g < 6; g++) playGame(seed++, n, mode, stats, 6000, greedyMoves);
+    }
+    expect(stats.captured).toBeGreaterThan(0);
+    expect(stats.games).toBe(48);
+    expect(stats.finished).toBe(48);
+    for (const t of ['upgradeCity', 'placeSettlement', 'buyDevCard', 'bankTrade', 'moveRobber', 'playKnight']) {
+      if (!stats.byType[t]) throw new Error('the greedy bot never played ' + t);
+    }
+  }, 120_000);
+
+  it('the same seed replays to the same final state', () => {
+    const a = playGame(42, 4, 'standard', newStats(), 800);
+    const b = playGame(42, 4, 'standard', newStats(), 800);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});

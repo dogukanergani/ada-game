@@ -1,0 +1,16 @@
+*.log
+.docs
+.env
+.env.*
+.vite
+dist
+docs/screenshots
+node_modules
+packages/client/dist
+playwright-report
+test-results
+CLAUDE.md
+docs/*
+!docs/GDD.md
+!docs/DECISIONS.md
+.claude/

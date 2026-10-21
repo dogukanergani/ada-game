@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ada">
+  <rect width="512" height="512" fill="#0b2530"/>
+  <g fill="none" stroke="#e8eef0" stroke-opacity="0.12" stroke-width="2">
+    <path d="M0 128H512M0 256H512M0 384H512M128 0V512M256 0V512M384 0V512"/>
+  </g>
+  <!-- shallows and the island: three hexagons -->
+  <g stroke-linejoin="round">
+    <g fill="#174759" stroke="#174759" stroke-width="46">
+      <path id="h" d="M256 118 L316 153 V223 L256 258 L196 223 V153 Z" transform="translate(0 0)"/>
+      <path d="M256 118 L316 153 V223 L256 258 L196 223 V153 Z" transform="translate(-60 105)"/>
+      <path d="M256 118 L316 153 V223 L256 258 L196 223 V153 Z" transform="translate(60 105)"/>
+    </g>
+    <g stroke="#0b1b22" stroke-width="6">
+      <path fill="#2e6b45" d="M256 118 L316 153 V223 L256 258 L196 223 V153 Z"/>
+      <path fill="#d8b342" d="M256 118 L316 153 V223 L256 258 L196 223 V153 Z" transform="translate(-60 105)"/>
+      <path fill="#b4572f" d="M256 118 L316 153 V223 L256 258 L196 223 V153 Z" transform="translate(60 105)"/>
+    </g>
+  </g>
+  <!-- the token on the middle tile and a settlement -->
+  <circle cx="256" cy="188" r="30" fill="#f4ead0" stroke="#5b4a2b" stroke-width="4"/>
+  <text x="256" y="200" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="34" fill="#c4261d">8</text>
+  <path d="M196 330 l24 -26 l24 26 v34 h-48 Z" fill="#ffb347" stroke="#0b1b22" stroke-width="6" stroke-linejoin="round"/>
+  <!-- the name -->
+  <text x="256" y="452" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="76" letter-spacing="8" fill="#ffb347">ADA</text>
+</svg>

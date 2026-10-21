@@ -1,0 +1,11 @@
+{
+  "name": "Ada",
+  "short_name": "Ada",
+  "description": "Arkadaşlarınla oda koduyla oynanan ada kurma oyunu.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b2530",
+  "theme_color": "#0b2530",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

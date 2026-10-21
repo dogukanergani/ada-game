@@ -1,0 +1,21 @@
+{
+  "name": "@ada/server",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.ts",
+  "types": "src/server.ts",
+  "scripts": {
+    "dev": "vite-node src/main.ts",
+    "start": "vite-node src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "cli": "vite-node cli/main.ts --"
+  },
+  "dependencies": {
+    "@ada/game-core": "*",
+    "@ada/protocol": "*",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0"
+  }
+}
