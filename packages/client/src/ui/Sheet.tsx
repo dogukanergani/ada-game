@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { useT } from '../i18n/context';
+import { useNoticeSlot } from './NoticeBar';
 
 interface SheetProps {
   title: string;
@@ -23,6 +24,8 @@ export function Sheet({ title, children, onClose, footer, sub }: SheetProps) {
   const t = useT();
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
+  /* a sheet the game forces open (no onClose) is an obligation; every other sheet keeps the notices in sight */
+  const notices = useNoticeSlot();
 
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
@@ -72,6 +75,7 @@ export function Sheet({ title, children, onClose, footer, sub }: SheetProps) {
             </button>
           )}
         </header>
+        {onClose && notices}
         {sub && <div className="sheet-sub">{sub}</div>}
         <div className="sheet-body">{children}</div>
         {footer && <div className="sheet-foot">{footer}</div>}

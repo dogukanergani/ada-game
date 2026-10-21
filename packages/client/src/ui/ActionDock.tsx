@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { BuildKind, Control, GameControls, Mode } from '../game/controls';
+import { blockMoment, blockedNow, type BlockedNote, type BuildKind, type Control, type GameControls, type Mode } from '../game/controls';
 import { useT } from '../i18n/context';
 import type { MessageKey } from '../i18n';
 import { reasonText, shortReason } from './reasons';
@@ -23,6 +23,8 @@ interface Props {
   extra?: ReactNode;
   /** a way to reopen the final scores once the game is over */
   onScores?: () => void;
+  /** turn, phase and whose move: the explanation of a blocked button belongs to one such moment and goes with it */
+  moment?: string;
 }
 
 /** One action: enabled only when the server says it is legal; a disabled one stays tappable and explains itself. */
@@ -57,9 +59,13 @@ function ActionButton({
   );
 }
 
-export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onBuyCard, onMode, onSheet, onConfirm, onCancel, extra, onScores }: Props) {
+export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onBuyCard, onMode, onSheet, onConfirm, onCancel, extra, onScores, moment = '' }: Props) {
   const t = useT();
-  const [blocked, setBlocked] = useState<string | null>(null);
+  const [note, setNote] = useState<BlockedNote | null>(null);
+  const here = blockMoment(moment, mode);
+  /* a tap on a button that was off must not outlive the turn, the phase or the mode it was made in */
+  const blocked = blockedNow(note, here);
+  const setBlocked = (text: string | null) => setNote(text ? { text, at: here } : null);
   const block = (c: Control) => setBlocked(c.reason ? reasonText(t, c.reason) : null);
   const { intent, forced, phase } = controls;
   const placing = intent !== null;

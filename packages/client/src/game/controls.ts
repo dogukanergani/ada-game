@@ -63,6 +63,17 @@ export interface GameControls {
 const on: Control = { enabled: true, reason: null };
 const off = (reason: Reason): Control => ({ enabled: false, reason });
 
+/** The explanation of a tapped button that was off, and the moment (turn, phase, mover, mode) it was asked in. */
+export interface BlockedNote {
+  text: string;
+  at: string;
+}
+
+export const blockMoment = (moment: string, mode: Mode): string => `${moment}:${mode.kind}:${mode.kind === 'build' ? mode.piece : ''}`;
+
+/** The note is shown only while the moment it was asked in is still the current one. */
+export const blockedNow = (note: BlockedNote | null, here: string): string | null => (note && note.at === here ? note.text : null);
+
 /** The cards still missing to pay `cost`. */
 export function missingFor(hand: Hand, cost: Hand): Hand {
   const m = { lumber: 0, brick: 0, wool: 0, grain: 0, ore: 0 } as Hand;

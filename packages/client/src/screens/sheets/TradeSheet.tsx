@@ -3,7 +3,7 @@ import { RESOURCES, type GameView, type Hand, type LegalMoves, type Resource, ty
 import { PIECE_OUTLINE, contrast, playerColor } from '../../board/colors';
 import { countHand } from '../../game/controls';
 import {
-  bankGetTiles, bankGiveTiles, bankPairLegal, bankSummary, canSendOffer, defaultTab, emptyHand, incomingOffers, offerGiveTiles, offerSummary,
+  bankGetTiles, bankGiveTiles, bankPairLegal, bankSummary, canSendOffer, emptyHand, incomingOffers, offerGiveTiles, offerSummary,
   offerWantTiles, ownOffer, type IncomingOffer,
 } from '../../game/tradeView';
 import { useT } from '../../i18n/context';
@@ -16,7 +16,9 @@ interface Props {
   legal: LegalMoves;
   onClose: () => void;
   send: (action: Record<string, unknown>) => Promise<boolean>;
-  initialTab?: 'bank' | 'players';
+  /** the tab belongs to the screen: a notice can send the player to the offers */
+  tab: 'bank' | 'players';
+  onTab: (t: 'bank' | 'players') => void;
 }
 
 /**
@@ -24,9 +26,8 @@ interface Props {
  * what can be accepted all come from the core and the server's legal moves; this
  * screen only lays them out, with the action pinned at the bottom.
  */
-export function TradeSheet({ view, legal, onClose, send, initialTab }: Props) {
+export function TradeSheet({ view, legal, onClose, send, tab, onTab: setTab }: Props) {
   const t = useT();
-  const [tab, setTab] = useState<'bank' | 'players'>(initialTab ?? defaultTab(view));
   const myTurn = view.current === view.me && view.phase === 'main';
   return (
     <TradeBody view={view} legal={legal} myTurn={myTurn} tab={tab} setTab={setTab} send={send} onClose={onClose} title={t('trade.title')} />

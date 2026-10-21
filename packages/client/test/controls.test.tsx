@@ -246,7 +246,7 @@ describe('trading', () => {
     state.offers = [{ id: 1, from: seller, give: { lumber: 0, brick: 0, wool: 0, grain: 0, ore: 0, [give]: 1 }, want: { lumber: 0, brick: 0, wool: 0, grain: 0, ore: 0, [want]: 20 } }];
     const view = m.of(buyer.id).view;
     const v2 = { ...view, offers: state.offers };
-    const html = render(<TradeSheet view={v2} legal={{ ...m.of(buyer.id).legal, acceptableOffers: [] }} onClose={noop} send={asyncNoop} />);
+    const html = render(<TradeSheet view={v2} legal={{ ...m.of(buyer.id).legal, acceptableOffers: [] }} onClose={noop} send={asyncNoop} tab="bank" onTab={noop} />);
     // the bank tab is open first; the players tab shows the offer
     expect(html).toContain(en['trade.bank']);
     const players = render(<TradeSheetPlayers view={v2} legal={{ ...m.of(buyer.id).legal, acceptableOffers: [] }} />);
@@ -259,7 +259,7 @@ describe('trading', () => {
 
 /** The trade sheet opened on its players tab (the sheet keeps the tab in state, so render it through a tiny wrapper that clicks nothing: the tab content is produced by the same component). */
 function TradeSheetPlayers(props: { view: Parameters<typeof TradeSheet>[0]['view']; legal: Parameters<typeof TradeSheet>[0]['legal'] }) {
-  return <TradeSheet {...props} onClose={noop} send={asyncNoop} initialTab="players" />;
+  return <TradeSheet {...props} onClose={noop} send={asyncNoop} tab="players" onTab={noop} />;
 }
 
 describe('what a player can see of the others', () => {

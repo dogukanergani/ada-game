@@ -3,6 +3,8 @@ import { defineConfig } from '@playwright/test';
 const PLAY = 4300;
 const FINISH = 4301;
 const CAPTURE = 4302;
+const OFFERS = 4303;
+const OFFERS_RES = 4304;
 
 /**
  * End-to-end tests run against the real thing: a server process that also
@@ -11,6 +13,8 @@ const CAPTURE = 4302;
  * Three servers: the usual one plays games at the real target score; the second
  * lowers the target to 3 points so a whole game ends within a minute; the third deals every
  * player six cards of each resource (ADA_TEST_RESOURCES=6) so the Soldier's capture can be played at once.
+ * The seed belongs to the server, so every game on a server draws from one dice stream: a spec that opens many
+ * games gets servers of its own (the fourth and fifth), or it would shift the dice of the specs that run after it.
  */
 export default defineConfig({
   testDir: 'e2e',
@@ -21,9 +25,11 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /finish\.spec|capture\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'play', testIgnore: /finish\.spec|capture\.spec|offer-visibility\.spec|hintline\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
     { name: 'capture', testMatch: /capture\.spec/, use: { baseURL: `http://localhost:${CAPTURE}` } },
+    { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },
+    { name: 'offers-res', testMatch: /offer-visibility\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
   ],
   webServer: [
     {
@@ -49,6 +55,22 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
       env: { PORT: String(CAPTURE), NODE_ENV: 'test', ADA_TEST_SEED: '20261022', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
+    },
+    {
+      command: 'npm run start -w @ada/server',
+      cwd: '../..',
+      url: `http://localhost:${OFFERS}/`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { PORT: String(OFFERS), NODE_ENV: 'test', ADA_TEST_SEED: '20261023', SERVER_SECRET: 'e2e-secret' },
+    },
+    {
+      command: 'npm run start -w @ada/server',
+      cwd: '../..',
+      url: `http://localhost:${OFFERS_RES}/`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { PORT: String(OFFERS_RES), NODE_ENV: 'test', ADA_TEST_SEED: '20261024', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
     },
   ],
 });

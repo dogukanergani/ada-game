@@ -222,3 +222,16 @@ Biçim: tarih, karar, gerekçe, etiket. "Varsayım" etiketli maddeler GDD'de bel
 - **Bilinçli test değişiklikleri:** `defaultTab` artık kendi açık teklifin olduğunda da Oyuncuyla sekmesini seçer (iptal etmek için); `controls.test.tsx` takas testi yeni çeviri anahtarlarına göre güncellendi; ekranda kaynak sayıları yuvarlanma süresince geride gösterildiğinden Playwright testleri elleri zar durduktan sonra okur.
 - Birim: istemci 114 (zar bileşeni durağan/yuvarlanan/reduced-motion, durum makinesi ve kesintiler, `snapshot` ile yeniden yükleme animasyon başlatmaz, takas mantığı), çekirdek 155, sunucu 91. Playwright 36 senaryo (üç sunucu); ekran görüntüleri `docs/screenshots/` içinde, commit'te değil.
 - **Yeni bağımlılık yok.**
+
+## Aşama 5
+
+### Adım 0: iki hata (22 Ekim 2026)
+
+**(a) Takas teklifi diğer oyuncuda görünmedi: kök neden.**
+- Yeniden üretim (`e2e/offer-visibility.spec.ts`, iki bağlam; alıcı masaüstü, 390x844 ve 360x640; `ADA_TEST_RESOURCES` açık ve kapalı iki sunucu; alıcının ekranı boşta, zar dönerken, zar bittikten sonra, Takas sayfası açıkken, Maliyetler sayfası açıkken): 30 hücreden **yalnızca "alıcının Takas sayfası Bankayla sekmesinde açık" başarısız oldu, 6 hücrenin 6'sında**. Zar animasyonu, sunucu türü ve ekran boyutu etkisizdi; zar katmanı `offers`'a hiç dokunmaz (yalnızca günlüğü, kart sayısını ve zarı geride tutar).
+- Neden: teklif bandı, `sheet !== 'trade'` koşuluyla gizleniyordu ve Takas sayfası kendi sekmesini yalnızca açılırken seçiyordu (`initialTab`). Alıcı sayfayı Bankayla sekmesinde açık tutarken teklif gelirse ne bant ne kart çıkıyordu; geriye yalnızca sekme başlığındaki küçük nokta kalıyordu. Günlükteki satır ise olayın kendisinden geldiği için göründü. Yani sorun ağda ya da zamanlamada değil, **bildirimin görünürlüğünün o an açık olan yüzeye bağlı olmasındaydı**.
+- Düzeltme (genel kural, `game/notices.ts`): bir bildirim (1) olaydan değil o anki görünümden türetilir; (2) oyun ekranını örtebilecek her yüzeyde gösterilir (oyun ekranı ve kapatılabilir her alt sayfa; `Sheet` bildirim çubuğunu `NoticeSlot` bağlamından alır, oyunun zorla açtığı kart atma ve çalma sayfaları bu işin dışındadır); (3) tek istisna, yüzeyin bildirimin içeriğini zaten gösterdiği durumdur (Takas sayfası Oyuncuyla sekmesinde). Sonraki bildirim türleri ("gelen yıkım", "sıra sende") `noticesFor` içine eklenir; ayrı görünürlük kodu yazılmaz. Takas sekmesi artık ekranın durumudur (`tab`/`onTab`), bildirime dokunmak sayfayı Oyuncuyla sekmesinde açar.
+- Sekme başlığı: açık gelen teklif varken `(n) Ada`.
+- Regresyon: yukarıdaki 30 hücre + "bildirime dokun, kartı gör, kabul et, iki tarafta takas" (31 senaryo geçiyor); birim testleri `notices.test.tsx`.
+
+**(b) Çelişen durum metni.** Neden: `ActionDock` içindeki pasif düğme açıklaması (`blocked`) yalnızca bir inşa düğmesine basılınca temizleniyordu. Düzeltme: açıklama, sorulduğu anla (tur, faz, sıradaki oyuncu, mod) birlikte saklanır ve an değişince görünmez (`blockMoment`, `blockedNow`). Kanıt: `hintline.spec.ts` düzeltme geçici kapatılınca kırmızı ("Received: 1"), açıkken yeşil.

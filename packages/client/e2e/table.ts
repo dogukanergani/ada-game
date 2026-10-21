@@ -142,7 +142,8 @@ export async function mover(seats: Seat[]): Promise<Seat> {
     for (const s of seats) if ((await s.action('roll').count()) > 0 || (await s.action('end').count()) > 0) return s;
     await seats[0].page.waitForTimeout(100);
   }
-  throw new Error('nobody can move');
+  const info = await Promise.all(seats.map(async (s) => `${s.name}: phase=${await s.page.locator('.game').getAttribute('data-phase').catch(() => '?')} hint=${await s.page.locator('p.hint').first().innerText().catch(() => '?')} actions=${(await s.page.locator('[data-action]').evaluateAll((e) => e.map((x) => x.getAttribute('data-action'))).catch(() => [])).join(',')}`));
+  throw new Error('nobody can move; ' + info.join(' | '));
 }
 
 export type Built = 'city' | 'settlement' | 'road' | 'card' | 'bank' | null;

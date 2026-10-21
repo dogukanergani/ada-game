@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PieceKind } from '@ada/game-core';
 import { Board, type Pick } from '../board/Board';
 import { NO_MODE, capturePieces, controlsFor, type Mode } from '../game/controls';
+import { defaultTab } from '../game/tradeView';
+import { titleFor, type Surface } from '../game/notices';
 import { heldBack, heldTotal, useReducedMotion, useRollPresentation, visibleLog } from '../game/roll';
 import { useT } from '../i18n/context';
 import { useApp } from '../net/app';
@@ -9,7 +11,7 @@ import { ActionDock, type SheetName } from '../ui/ActionDock';
 import { DiceTray } from '../ui/DiceTray';
 import { CapturePanel, type PreviewState } from '../ui/CapturePanel';
 import { HandBar } from '../ui/HandBar';
-import { OfferBanner } from '../ui/OfferBanner';
+import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
 import { LogList } from '../ui/LogList';
 import { LastEvent, PlayerStrip } from '../ui/PlayerStrip';
 import { CostsSheet, DiscardSheet, LogSheet, StealSheet } from './sheets/InfoSheets';
@@ -34,7 +36,7 @@ export function GameScreen() {
   const [mode, setMode] = useState<Mode>(NO_MODE);
   const [pick, setPick] = useState<Pick | null>(null);
   const [sheet, setSheet] = useState<SheetName | null>(null);
-  const [tradeTab, setTradeTab] = useState<'bank' | 'players' | undefined>(undefined);
+  const [tradeTab, setTradeTab] = useState<'bank' | 'players'>('bank');
   const [busy, setBusy] = useState(false);
   const [overOpen, setOverOpen] = useState(true);
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' });
@@ -114,7 +116,23 @@ export function GameScreen() {
 
   const closeSheet = () => setSheet(null);
 
+  /* notices (an open offer): shown on every surface that can cover the game, see game/notices.ts */
+  const surface: Surface = { sheet: sheet === 'trade' || sheet === 'cards' || sheet === 'costs' || sheet === 'log' ? sheet : null, tradeTab };
+  const openNotice = () => {
+    setTradeTab('players');
+    setSheet('trade');
+  };
+  const noticeBar = <NoticeBar view={view} surface={surface} onOpen={openNotice} />;
+  const waiting = view.offers.filter((o) => o.from !== view.me).length;
+  useEffect(() => {
+    document.title = titleFor(view);
+    return () => {
+      document.title = titleFor(null);
+    };
+  }, [waiting]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
+    <NoticeSlotProvider value={noticeBar}>
     <div className="game" data-phase={view.phase}>
       <header className="game-top">
         <PlayerStrip view={view} connected={connected} holdBack={holdCounts} />
@@ -135,21 +153,14 @@ export function GameScreen() {
       </div>
 
       <div className="game-dock">
-        {!controls.forced && sheet !== 'trade' && (
-          <OfferBanner
-            view={view}
-            onOpen={() => {
-              setTradeTab('players');
-              setSheet('trade');
-            }}
-          />
-        )}
+        {!controls.forced && sheet === null && noticeBar}
         <HandBar view={view} onOpenCards={() => setSheet('cards')} holdBack={holdMine} gain={roll.highlight && roll.roll ? (roll.roll.gains[view.me] ?? null) : null} />
         <ActionDock
           controls={controls}
           mode={mode}
           selection={confirmable ? label(pick!) : null}
           busy={busy}
+          moment={moment}
           onRoll={() => void send({ type: 'roll' })}
           onEnd={() => void send({ type: 'endTurn' })}
           onBuyCard={() => void send({ type: 'buyDevCard' })}
@@ -158,7 +169,7 @@ export function GameScreen() {
             setPick(null);
           }}
           onSheet={(name) => {
-            setTradeTab(undefined);
+            if (name === 'trade') setTradeTab(defaultTab(view));
             setSheet(name);
           }}
           onConfirm={() => void confirm()}
@@ -184,7 +195,7 @@ export function GameScreen() {
 
       {controls.forced === 'discard' && !roll.rolling && <DiscardSheet view={view} legal={legal} send={send} />}
       {controls.forced === 'steal' && !roll.rolling && <StealSheet view={view} legal={legal} send={send} />}
-      {!controls.forced && sheet === 'trade' && <TradeSheet view={view} legal={legal} onClose={closeSheet} send={send} initialTab={tradeTab} />}
+      {!controls.forced && sheet === 'trade' && <TradeSheet view={view} legal={legal} onClose={closeSheet} send={send} tab={tradeTab} onTab={setTradeTab} />}
       {!controls.forced && sheet === 'cards' && <DevCardsSheet view={view} legal={legal} onClose={closeSheet} onBuy={() => void send({ type: 'buyDevCard' })} send={send} />}
       {!controls.forced && sheet === 'costs' && <CostsSheet view={view} onClose={closeSheet} />}
       {!controls.forced && sheet === 'log' && <LogSheet view={view} log={shownLog} onClose={closeSheet} />}
@@ -198,5 +209,6 @@ export function GameScreen() {
         />
       )}
     </div>
+    </NoticeSlotProvider>
   );
 }
