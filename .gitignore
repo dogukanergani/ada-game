@@ -14,3 +14,4 @@ docs/*
 !docs/GDD.md
 !docs/DECISIONS.md
 .claude/
+reference/
