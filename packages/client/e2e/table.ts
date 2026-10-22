@@ -156,11 +156,11 @@ export async function bankTowardRoad(seat: Seat): Promise<boolean> {
   const wanted = (['brick', 'lumber', 'wool', 'grain'] as const).find((r) => hand[r] === 0) ?? 'brick';
   await seat.action('trade').click();
   const dialog = seat.page.getByRole('dialog');
-  const give = dialog.locator(`.rtile[data-block="give"][aria-disabled="false"]:not([data-resource="${wanted}"])`);
+  const give = dialog.locator(`.rrow[data-block="give"][aria-disabled="false"]:not([data-resource="${wanted}"])`);
   let done = false;
   if ((await give.count()) > 0) {
     await give.first().click();
-    const get = dialog.locator(`.rtile[data-block="get"][aria-disabled="false"][data-resource="${wanted}"]`);
+    const get = dialog.locator(`.rrow[data-block="get"][aria-disabled="false"][data-resource="${wanted}"]`);
     if ((await get.count()) > 0) {
       await get.first().click();
       await seat.action('bank-trade').click();

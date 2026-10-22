@@ -75,8 +75,8 @@ test('a player builds a road from the interface, trades with the other, reloads 
         await who.action('trade').click();
         await who.page.getByRole('tab', { name: 'Oyuncuyla' }).click();
         const dialog = who.page.getByRole('dialog');
-        await dialog.locator(`.rtile[data-block="offer-give"][data-resource="${give}"]`).click();
-        await dialog.locator(`.rtile[data-block="offer-want"][data-resource="${want}"]`).click();
+        await dialog.locator(`.rrow[data-block="offer-give"][data-resource="${give}"]`).click();
+        await dialog.locator(`.rrow[data-block="offer-want"][data-resource="${want}"]`).click();
         await who.action('send-offer').click();
         await expect(dialog.locator('[data-offer]')).toHaveCount(1);
         await shot(who.page, '06-trade-sheet', 'mobile');

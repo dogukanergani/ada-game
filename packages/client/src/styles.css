@@ -1316,135 +1316,192 @@ legend {
   border-color: var(--accent);
 }
 
-/* ---------- resource tiles ---------- */
-.rtiles {
+/* ---------- the trade columns: what goes out on the left, what comes in on the right ---------- */
+.trade-cols {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+  align-items: start;
 }
-.rtile-wrap {
+.col-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.trade-arrow {
+  align-self: center;
+  justify-self: center;
+  margin-top: 22px;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--accent);
+}
+.rrows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rrow-wrap {
   position: relative;
+  display: flex;
   min-width: 0;
 }
-.rtile {
-  position: relative;
-  display: block;
-  width: 100%;
-  min-height: 78px;
-  padding: 0;
-  overflow: hidden;
+.rrow {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
   border-radius: var(--radius);
-  border: 2px solid rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--line);
   background: var(--sea);
   cursor: pointer;
   text-align: left;
+  color: var(--text);
 }
-.rtile-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.rtile-label {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.rrow-text {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 3px 8px 4px;
-  background: rgba(11, 37, 48, 0.84);
   line-height: 1.15;
 }
-.rtile-name {
+.rrow-name {
   font-family: var(--font-head);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: capitalize;
 }
-.rtile-sub {
-  font-size: 12px;
+.rrow-sub {
+  font-size: 11.5px;
   color: #c4d4da;
-  min-height: 14px;
+  min-height: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.rtile-sub.off {
+.rrow-sub.off {
   color: var(--accent);
   font-weight: 600;
 }
-.rtile-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  padding: 1px 7px;
+.rrow-badge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
   border-radius: 10px;
-  background: rgba(11, 37, 48, 0.9);
+  background: var(--shallows);
   font-family: var(--font-head);
   font-weight: 800;
-  font-size: 16px;
+  font-size: 15px;
 }
-.rtile-count {
-  position: absolute;
-  top: 2px;
-  left: 6px;
+.rrow-count {
+  flex: 0 0 auto;
+  min-width: 14px;
+  text-align: center;
   font-family: var(--font-head);
   font-weight: 800;
-  font-size: 30px;
+  font-size: 20px;
   line-height: 1;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 2px #000;
+  color: var(--accent);
 }
-.rtile[aria-pressed='true'] {
+.rrow[aria-pressed='true'] {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent);
+  background: var(--shallows);
 }
-.rtile[aria-disabled='true'] {
+.rrow[aria-disabled='true'] {
   cursor: not-allowed;
 }
-.rtile[aria-disabled='true'] .rtile-bg {
-  opacity: 0.35;
+.rrow[aria-disabled='true'] .res-icon {
+  opacity: 0.45;
 }
-.rtile[aria-disabled='true'] .rtile-name {
+.rrow[aria-disabled='true'] .rrow-name {
   color: #c4d4da;
 }
-.rtile-remove {
+/* an offer row: the "−" sits inside the row's frame, at its end; its place is kept free even when empty, so the row does not jump when the first card is added */
+.rrow.with-remove {
+  padding-right: var(--tap);
+}
+.rrow.with-remove .res-icon {
+  width: 23px;
+  height: 23px;
+}
+.rrow-remove {
   position: absolute;
   top: 0;
   right: 0;
+  bottom: 0;
   width: var(--tap);
-  height: var(--tap);
   border: 0;
   background: transparent;
   cursor: pointer;
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 4px 4px 0 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
-.rtile-remove-dot {
-  width: 32px;
-  height: 32px;
+.rrow-remove[data-empty] {
+  visibility: hidden;
+}
+.rrow-remove-dot {
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: rgba(11, 37, 48, 0.92);
+  background: var(--sea);
   border: 2px solid var(--accent);
   color: #fff;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
-  line-height: 26px;
+  line-height: 24px;
   text-align: center;
+}
+@media (min-width: 900px) {
+  .sheet.wide {
+    max-width: 720px;
+  }
+  .trade-cols {
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+  }
+  .rrow {
+    min-height: 50px;
+    padding: 4px 10px;
+    gap: 8px;
+  }
+  .rrow-name {
+    font-size: 16px;
+  }
+  .rrow-sub {
+    font-size: 12.5px;
+  }
 }
 
 /* ---------- offers ---------- */
 .offer-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 10px;
+  padding: 6px 10px 8px;
   background: var(--sea);
   display: flex;
   flex-direction: column;
+  gap: 4px;
+}
+.offer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+}
+.offer-head .block-title {
+  margin: 0;
+}
+.offer-head .btn {
+  min-height: var(--tap);
 }
 .offer-card.mine {
   border-color: var(--accent);
@@ -1472,8 +1529,8 @@ legend {
 .exchange-side {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  flex: 1 1 120px;
+  gap: 2px;
+  flex: 1 1 110px;
   min-width: 0;
 }
 .exchange-label {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { RESOURCES, type GameView, type Hand, type LegalMoves, type Resource, type TradeOffer } from '@ada/game-core';
 import { PIECE_OUTLINE, contrast, playerColor } from '../../board/colors';
 import { countHand } from '../../game/controls';
@@ -8,7 +8,7 @@ import {
 } from '../../game/tradeView';
 import { useT } from '../../i18n/context';
 import { handText } from '../../i18n/format';
-import { ResourceChips, ResourceTile, tileReasonText } from '../../ui/ResourceTile';
+import { ResourceChips, ResourceRow, tileReasonText } from '../../ui/ResourceRow';
 import { Sheet } from '../../ui/Sheet';
 
 interface Props {
@@ -24,14 +24,13 @@ interface Props {
 /**
  * Trading with the bank and with the other players. Ratios, what is allowed and
  * what can be accepted all come from the core and the server's legal moves; this
- * screen only lays them out, with the action pinned at the bottom.
+ * screen only lays them out: what you give on the left, what you get (or ask for)
+ * on the right, one compact row per resource, the action pinned at the bottom.
  */
 export function TradeSheet({ view, legal, onClose, send, tab, onTab: setTab }: Props) {
   const t = useT();
   const myTurn = view.current === view.me && view.phase === 'main';
-  return (
-    <TradeBody view={view} legal={legal} myTurn={myTurn} tab={tab} setTab={setTab} send={send} onClose={onClose} title={t('trade.title')} />
-  );
+  return <TradeBody view={view} legal={legal} myTurn={myTurn} tab={tab} setTab={setTab} send={send} onClose={onClose} title={t('trade.title')} />;
 }
 
 interface BodyProps {
@@ -43,6 +42,30 @@ interface BodyProps {
   send: Props['send'];
   onClose: () => void;
   title: string;
+}
+
+/** Two columns with a thin arrow between them: left what goes out, right what comes in. */
+function Columns({ leftTitle, rightTitle, left, right }: { leftTitle: string; rightTitle: string; left: ReactNode; right: ReactNode }) {
+  const id = useId();
+  return (
+    <div className="trade-cols">
+      <section aria-labelledby={`${id}-l`}>
+        <h3 id={`${id}-l`} className="col-title">
+          {leftTitle}
+        </h3>
+        <div className="rrows">{left}</div>
+      </section>
+      <span className="trade-arrow" aria-hidden="true">
+        →
+      </span>
+      <section aria-labelledby={`${id}-r`}>
+        <h3 id={`${id}-r`} className="col-title">
+          {rightTitle}
+        </h3>
+        <div className="rrows">{right}</div>
+      </section>
+    </div>
+  );
 }
 
 function TradeBody({ view, legal, myTurn, tab, setTab, send, onClose, title }: BodyProps) {
@@ -160,54 +183,48 @@ function TradeBody({ view, legal, myTurn, tab, setTab, send, onClose, title }: B
   );
 
   return (
-    <Sheet title={title} onClose={onClose} footer={footer} sub={tabs}>
+    <Sheet title={title} onClose={onClose} footer={footer} sub={tabs} wide>
       {tab === 'bank' && (
         <div id="panel-bank" role="tabpanel" aria-labelledby="tab-bank" className="stack">
-          <section aria-labelledby="bank-give">
-            <h3 id="bank-give" className="block-title">{t('trade.youGive')}</h3>
-            <div className="rtiles">
-              {giveTiles.map((g) => (
-                <ResourceTile
-                  key={g.resource}
-                  resource={g.resource}
-                  block="give"
-                  pressed={give === g.resource}
-                  disabled={!g.enabled}
-                  badge={t('costs.ratio', { ratio: g.ratio })}
-                  sub={t('trade.have', { n: g.have })}
-                  reason={g.reason ? tileReasonText(t, g.reason) : null}
-                  label={`${name(g.resource)}, ${t('trade.have', { n: g.have })}, ${t('costs.ratio', { ratio: g.ratio })}${g.reason ? ', ' + tileReasonText(t, g.reason) : ''}`}
-                  onPress={() => {
-                    setGive(g.resource);
-                    setDone(false);
-                    if (get && !legal.bankTrades.some((x) => x.give === g.resource && x.get === get)) setGet(null);
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-          <section aria-labelledby="bank-get">
-            <h3 id="bank-get" className="block-title">{t('trade.youGet')}</h3>
-            <div className="rtiles">
-              {getTiles.map((g) => (
-                <ResourceTile
-                  key={g.resource}
-                  resource={g.resource}
-                  block="get"
-                  pressed={get === g.resource}
-                  disabled={!g.enabled}
-                  badge="1"
-                  sub={t('trade.inBank', { n: g.inBank })}
-                  reason={g.reason ? tileReasonText(t, g.reason) : null}
-                  label={`${name(g.resource)}, ${t('trade.inBank', { n: g.inBank })}${g.reason ? ', ' + tileReasonText(t, g.reason) : ''}`}
-                  onPress={() => {
-                    setGet(g.resource);
-                    setDone(false);
-                  }}
-                />
-              ))}
-            </div>
-          </section>
+          <Columns
+            leftTitle={t('trade.youGive')}
+            rightTitle={t('trade.youGet')}
+            left={giveTiles.map((g) => (
+              <ResourceRow
+                key={g.resource}
+                resource={g.resource}
+                block="give"
+                pressed={give === g.resource}
+                disabled={!g.enabled}
+                badge={t('costs.ratio', { ratio: g.ratio })}
+                sub={t('trade.have', { n: g.have })}
+                reason={g.reason ? tileReasonText(t, g.reason) : null}
+                label={`${name(g.resource)}, ${t('trade.have', { n: g.have })}, ${t('costs.ratio', { ratio: g.ratio })}${g.reason ? ', ' + tileReasonText(t, g.reason) : ''}`}
+                onPress={() => {
+                  setGive(g.resource);
+                  setDone(false);
+                  if (get && !legal.bankTrades.some((x) => x.give === g.resource && x.get === get)) setGet(null);
+                }}
+              />
+            ))}
+            right={getTiles.map((g) => (
+              <ResourceRow
+                key={g.resource}
+                resource={g.resource}
+                block="get"
+                pressed={get === g.resource}
+                disabled={!g.enabled}
+                badge="1"
+                sub={t('trade.inBank', { n: g.inBank })}
+                reason={g.reason ? tileReasonText(t, g.reason) : null}
+                label={`${name(g.resource)}, ${t('trade.inBank', { n: g.inBank })}${g.reason ? ', ' + tileReasonText(t, g.reason) : ''}`}
+                onPress={() => {
+                  setGet(g.resource);
+                  setDone(false);
+                }}
+              />
+            ))}
+          />
         </div>
       )}
 
@@ -220,47 +237,41 @@ function TradeBody({ view, legal, myTurn, tab, setTab, send, onClose, title }: B
 
           {myTurn ? (
             <>
-              <section aria-labelledby="offer-give">
-                <h3 id="offer-give" className="block-title">{t('trade.youGive')}</h3>
-                <div className="rtiles">
-                  {offerGiveTiles(view, offerGive, offerWant, myTurn).map((o) => (
-                    <ResourceTile
-                      key={o.resource}
-                      resource={o.resource}
-                      block="offer-give"
-                      pressed={o.count > 0}
-                      disabled={!o.enabled || o.count >= o.max}
-                      count={o.count}
-                      sub={t('trade.have', { n: o.max })}
-                      reason={o.reason ? tileReasonText(t, o.reason) : null}
-                      label={`${name(o.resource)}, ${t('trade.inc', { name: name(o.resource) })}`}
-                      removeLabel={t('trade.dec', { name: name(o.resource) })}
-                      onPress={() => bump(setOfferGive, offerGive, o.resource, 1, o.max)}
-                      onRemove={() => bump(setOfferGive, offerGive, o.resource, -1, o.max)}
-                    />
-                  ))}
-                </div>
-              </section>
-              <section aria-labelledby="offer-want">
-                <h3 id="offer-want" className="block-title">{t('trade.youAsk')}</h3>
-                <div className="rtiles">
-                  {offerWantTiles(offerWant, offerGive, myTurn).map((o) => (
-                    <ResourceTile
-                      key={o.resource}
-                      resource={o.resource}
-                      block="offer-want"
-                      pressed={o.count > 0}
-                      disabled={!o.enabled || o.count >= o.max}
-                      count={o.count}
-                      reason={o.reason ? tileReasonText(t, o.reason) : null}
-                      label={`${name(o.resource)}, ${t('trade.inc', { name: name(o.resource) })}`}
-                      removeLabel={t('trade.dec', { name: name(o.resource) })}
-                      onPress={() => bump(setOfferWant, offerWant, o.resource, 1, o.max)}
-                      onRemove={() => bump(setOfferWant, offerWant, o.resource, -1, o.max)}
-                    />
-                  ))}
-                </div>
-              </section>
+              <Columns
+                leftTitle={t('trade.youGive')}
+                rightTitle={t('trade.youAsk')}
+                left={offerGiveTiles(view, offerGive, offerWant, myTurn).map((o) => (
+                  <ResourceRow
+                    key={o.resource}
+                    resource={o.resource}
+                    block="offer-give"
+                    pressed={o.count > 0}
+                    disabled={!o.enabled || o.count >= o.max}
+                    count={o.count}
+                    sub={t('trade.have', { n: o.max })}
+                    reason={o.reason ? tileReasonText(t, o.reason) : null}
+                    label={`${name(o.resource)}, ${t('trade.inc', { name: name(o.resource) })}`}
+                    removeLabel={t('trade.dec', { name: name(o.resource) })}
+                    onPress={() => bump(setOfferGive, offerGive, o.resource, 1, o.max)}
+                    onRemove={() => bump(setOfferGive, offerGive, o.resource, -1, o.max)}
+                  />
+                ))}
+                right={offerWantTiles(offerWant, offerGive, myTurn).map((o) => (
+                  <ResourceRow
+                    key={o.resource}
+                    resource={o.resource}
+                    block="offer-want"
+                    pressed={o.count > 0}
+                    disabled={!o.enabled || o.count >= o.max}
+                    count={o.count}
+                    reason={o.reason ? tileReasonText(t, o.reason) : null}
+                    label={`${name(o.resource)}, ${t('trade.inc', { name: name(o.resource) })}`}
+                    removeLabel={t('trade.dec', { name: name(o.resource) })}
+                    onPress={() => bump(setOfferWant, offerWant, o.resource, 1, o.max)}
+                    onRemove={() => bump(setOfferWant, offerWant, o.resource, -1, o.max)}
+                  />
+                ))}
+              />
               <p className="field-hint">{t('trade.tapHint')}</p>
             </>
           ) : (
@@ -284,7 +295,7 @@ function PlayerDisc({ view, id }: { view: GameView; id: string }) {
   );
 }
 
-/** What is given, an arrow, what is asked for. */
+/** What is given, an arrow, what is asked for: one compact line (it wraps on a narrow screen). */
 function Exchange({ give, want }: { give: Hand; want: Hand }) {
   const t = useT();
   return (
@@ -308,11 +319,13 @@ function OwnOfferCard({ offer, onCancel }: { offer: TradeOffer; onCancel: () => 
   const t = useT();
   return (
     <section className="offer-card mine" data-offer={offer.id} aria-label={t('trade.mine')}>
-      <h3 className="block-title">{t('trade.mine')}</h3>
+      <div className="offer-head">
+        <h3 className="block-title">{t('trade.mine')}</h3>
+        <button type="button" className="btn" data-action="withdraw" onClick={onCancel}>
+          {t('trade.withdraw')}
+        </button>
+      </div>
       <Exchange give={offer.give} want={offer.want} />
-      <button type="button" className="btn wide" data-action="withdraw" onClick={onCancel}>
-        {t('trade.withdraw')}
-      </button>
     </section>
   );
 }
@@ -324,10 +337,12 @@ function IncomingCard({ view, incoming }: { view: GameView; incoming: IncomingOf
   const who = view.players.find((p) => p.id === offer.from)?.name ?? '?';
   return (
     <section className="offer-card" data-offer={offer.id} aria-label={t('trade.incomingFrom', { player: who })}>
-      <h3 className="block-title offer-from">
-        <PlayerDisc view={view} id={offer.from} />
-        {t('trade.incomingFrom', { player: who })}
-      </h3>
+      <div className="offer-head">
+        <h3 className="block-title offer-from">
+          <PlayerDisc view={view} id={offer.from} />
+          {t('trade.incomingFrom', { player: who })}
+        </h3>
+      </div>
       <Exchange give={offer.give} want={offer.want} />
     </section>
   );

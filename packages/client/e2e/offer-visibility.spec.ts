@@ -58,8 +58,8 @@ async function toOfferMoment(seats: Seat[]): Promise<{ give: string; want: strin
 async function sendOffer(who: Seat, give: string, want: string) {
   await who.action('trade').click();
   await who.page.getByRole('tab', { name: 'Oyuncuyla' }).click();
-  await who.page.locator(`.rtile[data-block="offer-give"][data-resource="${give}"]`).click();
-  await who.page.locator(`.rtile[data-block="offer-want"][data-resource="${want}"]`).click();
+  await who.page.locator(`.rrow[data-block="offer-give"][data-resource="${give}"]`).click();
+  await who.page.locator(`.rrow[data-block="offer-want"][data-resource="${want}"]`).click();
   await who.action('send-offer').click();
   await expect(who.page.locator('.offer-card.mine')).toBeVisible();
   await who.page.getByRole('button', { name: 'Kapat' }).click();

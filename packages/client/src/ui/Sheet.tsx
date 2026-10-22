@@ -11,6 +11,8 @@ interface SheetProps {
   footer?: ReactNode;
   /** pinned between the title and the scrolling content (tabs that must stay in sight) */
   sub?: ReactNode;
+  /** a wider panel on a wide screen (the two-column trade sheet) */
+  wide?: boolean;
 }
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -20,7 +22,7 @@ const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select
  * screen. It is a modal dialog: focus moves in, Tab stays inside, Escape and a
  * tap outside close it (unless it is forced), and focus returns to where it was.
  */
-export function Sheet({ title, children, onClose, footer, sub }: SheetProps) {
+export function Sheet({ title, children, onClose, footer, sub, wide = false }: SheetProps) {
   const t = useT();
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -59,7 +61,7 @@ export function Sheet({ title, children, onClose, footer, sub }: SheetProps) {
     <div className="sheet-backdrop" onClick={onClose}>
       <div
         ref={ref}
-        className="sheet"
+        className={wide ? 'sheet wide' : 'sheet'}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
