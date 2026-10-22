@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { applyAction, createGame, legalRoadEdges, legalSettlementVertices, topologyOf, viewFor, type GameMode, type GameView } from '@ada/game-core';
 import { mulberry32 } from '../../game-core/sim/rng';
 import { Board, type BoardTarget } from '../src/board/Board';

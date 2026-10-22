@@ -10,7 +10,7 @@ import { TradeSheet } from '../src/screens/sheets/TradeSheet';
 import { ActionDock } from '../src/ui/ActionDock';
 import { CapturePanel } from '../src/ui/CapturePanel';
 import { HandBar } from '../src/ui/HandBar';
-import { PlayerStrip } from '../src/ui/PlayerStrip';
+import { Seats } from '../src/ui/Seats';
 import { reach } from './fixtures';
 
 beforeAll(() => {
@@ -266,12 +266,14 @@ describe('what a player can see of the others', () => {
   const m = reach((s) => s.phase === 'main' && s.turn > 12 && s.players.every((p) => p.hand.ore + p.hand.wool + p.hand.grain > 0));
   const { view } = m.of('p0');
 
-  it('the strip shows rivals only as counts, and the hand bar only the player\'s own cards', () => {
-    const html = render(<PlayerStrip view={view} connected={{}} />);
+  it('a seat shows a rival only as two counts (all cards, development cards), and the hand bar only the player\'s own cards', () => {
+    const html = render(<Seats view={view} connected={{}} which="opponents" />);
     for (const p of m.state.players.filter((x) => x.id !== 'p0')) {
       const total = RESOURCES.reduce((n, r) => n + p.hand[r], 0);
-      expect(html).toContain(en['strip.cards'].replace('{n}', String(total)));
+      expect(html).toContain(en['seat.cards'].replace('{n}', String(total)));
     }
+    // no resource is named anywhere on a rival's seat: only the totals are known to the screen
+    for (const r of RESOURCES) expect(html).not.toContain(en[`resource.${r}` as const]);
     const bar = render(<HandBar view={view} onOpenCards={noop} />);
     expect(bar.match(/class="hand-chip"/g)).toHaveLength(5);
     const mine = m.state.players.find((p) => p.id === 'p0')!.hand;
@@ -285,22 +287,22 @@ describe('what a player can see of the others', () => {
 
   it('shows who has dropped, in words, and marks a dropped player whose turn it is', () => {
     const other = m.state.players.find((p) => p.id !== 'p0')!.id;
-    const html = render(<PlayerStrip view={view} connected={{ [other]: false }} />);
-    expect(html).toContain(en['strip.offline']);
+    const html = render(<Seats view={view} connected={{ [other]: false }} which="opponents" />);
+    expect(html).toContain(en['seat.offline']);
     expect(html).toContain('data-online="false"');
   });
 });
 
 describe('a player who dropped on their turn', () => {
   it('is named in a banner, in words, when it is not the viewer\'s turn', async () => {
-    const { LastEvent } = await import('../src/ui/PlayerStrip');
+    const { LastEvent } = await import('../src/ui/LastEvent');
     const m = reach((s) => s.phase === 'main' && s.turn > 8, { n: 3 });
     const mover = m.state.current;
     const viewer = m.state.players.find((p) => p.id !== mover)!.id;
     const { view } = m.of(viewer);
     const name = view.players.find((p) => p.id === mover)!.name;
     const html = render(<LastEvent view={view} log={[]} connected={{ [mover]: false }} />);
-    expect(html).toContain(en['strip.waitingFor'].replace('{player}', name));
+    expect(html).toContain(en['last.waitingFor'].replace('{player}', name));
     expect(html).toContain('role="status"');
     // no banner when they are connected, nor when the dropped player is the viewer
     expect(render(<LastEvent view={view} log={[]} connected={{}} />)).not.toContain('waiting-banner');

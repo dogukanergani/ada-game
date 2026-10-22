@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 import { DESKTOP, MOBILE, SMALL } from './helpers';
 import { doForced, mover, newTable, playSetup, type Seat } from './table';
 
@@ -18,6 +18,9 @@ const sizes = [
   { label: 'small', viewport: SMALL },
   { label: 'desktop', viewport: DESKTOP },
 ];
+
+/** a touch within this many pixels of a button is taken for a tap on the button (the browser snaps touches to a nearby button) */
+const TOUCH_SNAP_PX = 18;
 
 interface Road {
   id: number;
@@ -140,8 +143,17 @@ for (const map of maps) {
               const x = r.x1 + ux * len * along - uy * across;
               const y = r.y1 + uy * len * along + ux * across;
               if (!inside(x, y)) continue;
-              // something else on top (a zoom button, the dice) takes that tap: not what is tested here
-              const top = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.closest('.board-svg') !== null, [x, y]);
+              // a zoom button or the dice on top of, or right next to, that spot takes the tap: not what is tested here
+              const top = await page.evaluate(
+                ([px, py, slop]) => {
+                  const near = [...document.querySelectorAll('.board-button, .dice-tray')].some((e) => {
+                    const r = e.getBoundingClientRect();
+                    return px > r.left - slop && px < r.right + slop && py > r.top - slop && py < r.bottom + slop;
+                  });
+                  return !near && document.elementFromPoint(px, py)?.closest('.board-svg') !== null;
+                },
+                [x, y, TOUCH_SNAP_PX],
+              );
               if (!top) {
                 covered++;
                 continue;
@@ -151,6 +163,8 @@ for (const map of maps) {
               if (ranked[0].d > 10 || (ranked[1] && ranked[1].d - ranked[0].d < 4)) continue;
               await tapAt(x, y);
               const sel = page.locator('.spot-edge[data-selected="true"]');
+              // the choice is drawn a moment after the tap: wait for it before calling the tap empty
+              await sel.first().waitFor({ timeout: 500 }).catch(() => undefined);
               const picked = (await sel.count()) > 0 ? Number(await sel.first().getAttribute('data-edge')) : null;
               const tag = `road ${ranked[0].q.id} tapped ${along}/${across}px (d=${ranked[0].d.toFixed(1)}) -> ${picked}`;
               if (picked === null) {

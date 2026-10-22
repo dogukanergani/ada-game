@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 import { DESKTOP, MOBILE, SMALL } from './helpers';
 import { doForced, mover, newTable, playSetup, startShort, type Seat } from './table';
 

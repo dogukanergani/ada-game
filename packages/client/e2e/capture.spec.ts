@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { shot } from './helpers';
 import { doForced, mover, newTable, playSetup, type Seat } from './table';
 
@@ -7,7 +7,7 @@ import { doForced, mover, newTable, playSetup, type Seat } from './table';
  * six cards of every resource and the capture can be afforded from the first turn.
  */
 
-const playerId = (seat: Seat) => seat.page.evaluate(() => document.querySelector('.chip .tag')?.closest('.chip')?.getAttribute('data-player') ?? '');
+const playerId = (seat: Seat) => seat.page.evaluate(() => document.querySelector('.pseat[data-me="true"]')?.getAttribute('data-player') ?? '');
 
 async function startWithRoles(seats: Seat[]) {
   const [host, guest] = seats;
@@ -78,8 +78,8 @@ test('the Soldier captures a rival settlement: mode, target, preview, confirm, a
   for (const s of seats) {
     await expect(s.page.locator(`.building[data-vertex="${vertex}"]`)).toHaveAttribute('data-owner', soldierId);
     await expect(s.page.locator('.last-text')).toContainText('ele geçirdi');
-    await expect(s.page.locator(`.chip[data-player="${soldierId}"] .chip-points`)).toContainText('3 puan');
-    await expect(s.page.locator(`.chip[data-player="${rivalId}"] .chip-points`)).toContainText('1 puan');
+    await expect(s.page.locator(`.pseat[data-player="${soldierId}"] .pseat-points`)).toHaveText(/^3\b/);
+    await expect(s.page.locator(`.pseat[data-player="${rivalId}"] .pseat-points`)).toHaveText(/^1\b/);
   }
   const after = await soldier.hand();
   expect(after.ore).toBe(before.ore - 3);
@@ -103,5 +103,5 @@ test('the Soldier captures a rival settlement: mode, target, preview, confirm, a
   await expect(soldier.action('confirm')).toHaveAttribute('aria-disabled', 'true');
   await shot(soldier.page, '44-capture-refused', 'mobile');
   // the refused piece changed nothing on the rival's screen
-  await expect(rival.page.locator(`.chip[data-player="${rivalId}"] .chip-points`)).toContainText('1 puan');
+  await expect(rival.page.locator(`.pseat[data-player="${rivalId}"] .pseat-points`)).toHaveText(/^1\b/);
 });

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { MOBILE, SHOTS, openPlayer } from './helpers';
 import { join } from 'node:path';
 

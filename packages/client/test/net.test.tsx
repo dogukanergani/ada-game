@@ -181,7 +181,7 @@ describe('Connection', () => {
   async function boot(protocolVersion?: number) {
     const { createAdaServer } = await import('../../server/src/server');
     const server = createAdaServer({
-      config: { port: 0, corsOrigins: ['*'], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources: null },
+      config: { port: 0, corsOrigins: ['*'], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources: null, testCreateLimit: null },
       sweepIntervalMs: 0,
     });
     const port = await server.listen(0);

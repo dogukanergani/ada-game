@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { MOBILE, openPlayer, shot } from './helpers';
 import { newTable, startShort, playSetup } from './table';
 
@@ -12,12 +12,12 @@ test('losing the connection shows it plainly, the others see the player as offli
   await expect(a.page.locator('.status-line')).toBeVisible({ timeout: 40_000 });
   await shot(a.page, '20-offline', 'mobile');
   // the other player sees the dropped player marked in words, not only by colour
-  await expect(b.page.locator('.chip[data-online="false"]')).toHaveCount(1, { timeout: 40_000 });
-  await expect(b.page.locator('.chip[data-online="false"] .badge.offline')).toContainText('çevrimdışı');
+  await expect(b.page.locator('.pseat[data-online="false"]')).toHaveCount(1, { timeout: 40_000 });
+  await expect(b.page.locator('.pseat[data-online="false"] .pseat-offline')).toContainText('çevrimdışı');
 
   await a.player.context.setOffline(false);
   await expect(a.page.locator('.status-line')).toHaveCount(0, { timeout: 40_000 });
   await expect(a.page.locator('.game')).toBeVisible();
-  await expect(b.page.locator('.chip[data-online="false"]')).toHaveCount(0, { timeout: 20_000 });
+  await expect(b.page.locator('.pseat[data-online="false"]')).toHaveCount(0, { timeout: 20_000 });
   void openPlayer;
 });

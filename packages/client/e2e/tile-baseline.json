@@ -1,0 +1,254 @@
+{
+  "classic19-2p-mobile": {
+    "mover": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 447
+    },
+    "waiting": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 468
+    }
+  },
+  "classic19-2p-small": {
+    "mover": {
+      "tile": 29.2,
+      "boardW": 360,
+      "boardH": 232
+    },
+    "waiting": {
+      "tile": 37,
+      "boardW": 360,
+      "boardH": 280
+    }
+  },
+  "classic19-2p-desktop": {
+    "mover": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    },
+    "waiting": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    }
+  },
+  "classic19-3p-mobile": {
+    "waiting": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 468
+    },
+    "mover": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 447
+    }
+  },
+  "classic19-3p-small": {
+    "waiting": {
+      "tile": 37,
+      "boardW": 360,
+      "boardH": 280
+    },
+    "mover": {
+      "tile": 29.2,
+      "boardW": 360,
+      "boardH": 232
+    }
+  },
+  "classic19-3p-desktop": {
+    "waiting": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    },
+    "mover": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    }
+  },
+  "classic19-4p-mobile": {
+    "waiting": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 468
+    },
+    "mover": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 447
+    }
+  },
+  "classic19-4p-small": {
+    "waiting": {
+      "tile": 37,
+      "boardW": 360,
+      "boardH": 280
+    },
+    "mover": {
+      "tile": 29.2,
+      "boardW": 360,
+      "boardH": 232
+    }
+  },
+  "classic19-4p-desktop": {
+    "waiting": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    },
+    "mover": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    }
+  },
+  "classic19-5p-mobile": {
+    "mover": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 447
+    },
+    "waiting": {
+      "tile": 60.1,
+      "boardW": 390,
+      "boardH": 468
+    }
+  },
+  "classic19-5p-small": {
+    "waiting": {
+      "tile": 37,
+      "boardW": 360,
+      "boardH": 280
+    },
+    "mover": {
+      "tile": 29.2,
+      "boardW": 360,
+      "boardH": 232
+    }
+  },
+  "classic19-5p-desktop": {
+    "waiting": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    },
+    "mover": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    }
+  },
+  "large30-5p-mobile": {
+    "waiting": {
+      "tile": 52,
+      "boardW": 390,
+      "boardH": 468
+    },
+    "mover": {
+      "tile": 50,
+      "boardW": 390,
+      "boardH": 447
+    }
+  },
+  "large30-5p-small": {
+    "waiting": {
+      "tile": 28.9,
+      "boardW": 360,
+      "boardH": 280
+    },
+    "mover": {
+      "tile": 22.8,
+      "boardW": 360,
+      "boardH": 232
+    }
+  },
+  "large30-5p-desktop": {
+    "waiting": {
+      "tile": 94.7,
+      "boardW": 880,
+      "boardH": 800
+    },
+    "mover": {
+      "tile": 94.7,
+      "boardW": 880,
+      "boardH": 800
+    }
+  },
+  "short14-2p-mobile": {
+    "mover": {
+      "tile": 64.1,
+      "boardW": 390,
+      "boardH": 447
+    },
+    "waiting": {
+      "tile": 67.4,
+      "boardW": 390,
+      "boardH": 468
+    }
+  },
+  "short14-2p-small": {
+    "waiting": {
+      "tile": 37,
+      "boardW": 360,
+      "boardH": 280
+    },
+    "mover": {
+      "tile": 29.2,
+      "boardW": 360,
+      "boardH": 232
+    }
+  },
+  "short14-2p-desktop": {
+    "waiting": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    },
+    "mover": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    }
+  },
+  "short14-4p-mobile": {
+    "waiting": {
+      "tile": 67.4,
+      "boardW": 390,
+      "boardH": 468
+    },
+    "mover": {
+      "tile": 64.1,
+      "boardW": 390,
+      "boardH": 447
+    }
+  },
+  "short14-4p-small": {
+    "waiting": {
+      "tile": 37,
+      "boardW": 360,
+      "boardH": 280
+    },
+    "mover": {
+      "tile": 29.2,
+      "boardW": 360,
+      "boardH": 232
+    }
+  },
+  "short14-4p-desktop": {
+    "mover": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    },
+    "waiting": {
+      "tile": 121.2,
+      "boardW": 880,
+      "boardH": 800
+    }
+  }
+}

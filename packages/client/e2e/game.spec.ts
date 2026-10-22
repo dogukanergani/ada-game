@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 import { shot } from './helpers';
 import { doForced, mover, newTable, playSetup, startShort, takeTurn, type Built } from './table';
 
@@ -25,7 +25,7 @@ test('two players set up a game and the first roll works, on phones', async ({ b
   const { seats } = await newTable(browser, ['Ayşe', 'Çağlar']);
   await startShort(seats);
   for (const s of seats) {
-    await expect(s.page.locator('.strip .chip')).toHaveCount(2);
+    await expect(s.page.locator('.pseat')).toHaveCount(2);
     await expect(s.page.locator('.board-svg')).toBeVisible();
   }
   await playSetup(seats);
@@ -107,12 +107,12 @@ test('a player builds a road from the interface, trades with the other, reloads 
   await a.page.reload();
   await a.page.locator('.game').waitFor();
   expect(await a.hand()).toEqual(handBefore);
-  await expect(a.page.locator('.strip .chip')).toHaveCount(2);
+  await expect(a.page.locator('.pseat')).toHaveCount(2);
   await b.page.waitForTimeout(100);
 
   // what reached each browser holds no rival hand: every game message shows the others' hands as null
   for (const [i, s] of seats.entries()) {
-    const me = await s.page.evaluate(() => document.querySelector('.chip .tag')?.closest('.chip')?.getAttribute('data-player') ?? null);
+    const me = await s.page.evaluate(() => document.querySelector('.pseat[data-me="true"]')?.getAttribute('data-player') ?? null);
     const games = frames[i].filter((f): f is [string, { view: { me: string; players: { id: string; hand: unknown; devCards: unknown }[] } }] => Array.isArray(f) && /^game:/.test(String(f[0])));
     expect(games.length).toBeGreaterThan(0);
     for (const [, payload] of games) {
@@ -128,5 +128,5 @@ test('a player builds a road from the interface, trades with the other, reloads 
   // and the page itself shows only counts for the other player
   const html = await b.page.content();
   expect(html.match(/class="hand-chip"/g)?.length).toBe(5);
-  expect(await b.page.locator('.chip').count()).toBe(2);
+  expect(await b.page.locator('.pseat').count()).toBe(2);
 });

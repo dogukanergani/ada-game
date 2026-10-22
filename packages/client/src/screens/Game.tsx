@@ -13,7 +13,8 @@ import { CapturePanel, type PreviewState } from '../ui/CapturePanel';
 import { HandBar } from '../ui/HandBar';
 import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
 import { LogList } from '../ui/LogList';
-import { LastEvent, PlayerStrip } from '../ui/PlayerStrip';
+import { LastEvent } from '../ui/LastEvent';
+import { Seats } from '../ui/Seats';
 import { CostsSheet, DiscardSheet, LogSheet, StealSheet } from './sheets/InfoSheets';
 import { DevCardsSheet } from './sheets/DevCardsSheet';
 import { GameOverSheet } from './sheets/GameOverSheet';
@@ -135,11 +136,12 @@ export function GameScreen() {
     <NoticeSlotProvider value={noticeBar}>
     <div className="game" data-phase={view.phase}>
       <header className="game-top">
-        <PlayerStrip view={view} connected={connected} holdBack={holdCounts} />
         <LastEvent view={view} log={shownLog} connected={connected} rolling={roll.rolling} />
       </header>
 
-      <div className="game-board" onPointerDownCapture={roll.skip}>
+      <div className="game-table" data-players={view.players.length}>
+        <Seats view={view} connected={connected} holdBack={holdCounts} which="opponents" />
+        <div className="game-board" onPointerDownCapture={roll.skip}>
         <Board
           view={view}
           target={controls.intent?.target ?? null}
@@ -150,6 +152,8 @@ export function GameScreen() {
         />
         {roll.stage !== 'still' && roll.roll && <DiceTray dice={view.dice} stage={roll.stage} stageLayer />}
         <DiceTray dice={view.dice} stage={roll.stage} />
+        </div>
+        <Seats view={view} connected={connected} holdBack={holdCounts} which="me" />
       </div>
 
       <div className="game-dock">

@@ -520,7 +520,7 @@ select {
   min-width: 0;
 }
 .game-board {
-  grid-area: board;
+  flex: 1 1 auto;
   position: relative;
   min-height: 0;
   display: flex;
@@ -576,62 +576,15 @@ select {
     overflow-y: auto;
     min-height: 0;
   }
-  .strip {
-    flex-direction: column;
-    overflow: visible;
-  }
-  .chip {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px 10px;
-  }
 }
 
-/* ---------- player strip ---------- */
-.strip {
-  list-style: none;
-  margin: 0;
-  padding: 6px 8px;
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  background: var(--panel);
-}
-.chip {
-  flex: 0 0 auto;
-  min-width: 128px;
+/* ---------- the table: the board with the player seats round it ---------- */
+.game-table {
+  grid-area: board;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--sea);
-  font-size: 13px;
-}
-.chip[data-turn='true'] {
-  border: 2px solid var(--accent);
-  padding: 5px 7px;
-}
-.chip[data-online='false'] {
-  opacity: 0.8;
-  border-style: dashed;
-}
-.chip-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 14px;
-}
-.chip-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 96px;
+  min-width: 0;
+  min-height: 0;
 }
 .seat {
   flex: 0 0 auto;
@@ -645,46 +598,243 @@ select {
   align-items: center;
   justify-content: center;
 }
-.chip-role,
-.chip-counts {
-  color: var(--muted);
-}
-.chip-points {
-  font-weight: 700;
-}
-.chip-hidden {
-  font-weight: 400;
-  color: var(--muted);
-}
-.chip-badges {
+/* the opponents in one row above the board (clockwise from the viewer, the next player at the left), the viewer below it */
+.seats {
+  flex: 0 0 auto;
+  list-style: none;
+  margin: 0;
+  padding: 6px 6px 4px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.badge {
-  font-size: 11px;
-  padding: 0 6px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  white-space: nowrap;
-}
-.badge.turn {
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 700;
-}
-.badge.offline {
-  border-color: var(--danger);
-  color: var(--danger);
-  display: inline-flex;
+  justify-content: space-around;
   align-items: center;
   gap: 4px;
+  background: var(--panel);
 }
-.badge.offline .presence-dot {
-  background: transparent;
-  border: 2px solid var(--danger);
+.seats-opponents {
+  border-bottom: 1px solid var(--line);
+}
+.seats-me {
+  justify-content: center;
+  border-top: 1px solid var(--line);
+}
+.pseat {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 128px;
+  display: flex;
+  justify-content: center;
+}
+.seats-me .pseat {
+  flex: 0 0 auto;
+  max-width: none;
+}
+.pseat-btn {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--sea);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pseat[data-me='true'] .pseat-btn {
+  background: var(--shallows);
+}
+.pseat[data-turn='true'] .pseat-btn {
+  border-color: var(--accent);
+}
+.pseat[data-online='false'] .pseat-btn {
+  border-style: dashed;
+  border-color: var(--danger);
+}
+.pseat-avatar {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+}
+.pseat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+  line-height: 1.1;
+}
+.pseat-id {
+  display: none;
+}
+.pseat-nums {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.pseat-points {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.pseat-hidden {
+  font-weight: 500;
+  font-size: 10px;
+  color: var(--muted);
+}
+.pseat-counts {
+  display: flex;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pseat-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.pseat-ico {
+  flex: 0 0 auto;
+}
+/* flags sit on the corner of the seat, so a flag appearing or going never changes the height of the row (and so of the board) */
+.pseat-flags {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  display: flex;
+  gap: 2px;
+  z-index: 1;
+}
+.pseat-flag,
+.pseat-turn,
+.pseat-offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 3px;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--sea);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pseat-turn {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #1d1300;
+}
+.pseat-offline {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.pseat-offline .presence-dot {
   width: 8px;
   height: 8px;
+  background: transparent;
+  border: 2px solid var(--danger);
+}
+.pseat-flag-text {
+  display: none;
+}
+.pseat-tip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--panel);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.seats-me .pseat-tip {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+@media (max-width: 400px) {
+  .pseat-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .pseat-counts {
+    gap: 3px;
+    font-size: 10.5px;
+  }
+}
+/* a wide screen: the name and the role are written out, the seats are larger */
+@media (min-width: 900px) {
+  .seats {
+    padding: 8px 10px 4px;
+    gap: 10px;
+  }
+  .pseat {
+    max-width: 232px;
+  }
+  .pseat-btn {
+    min-height: 52px;
+    gap: 8px;
+    padding: 4px 10px;
+  }
+  .pseat-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .pseat-id {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 13px;
+  }
+  .pseat-name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pseat-role {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pseat-nums {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .pseat-points {
+    font-size: 18px;
+  }
+  .pseat-counts {
+    gap: 8px;
+    font-size: 12px;
+  }
+  .pseat-flags {
+    right: 8px;
+    top: -9px;
+  }
+  .pseat-flag-text {
+    display: inline;
+  }
+  .pseat-tip {
+    display: none;
+  }
 }
 
 /* ---------- last event and dice ---------- */

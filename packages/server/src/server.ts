@@ -54,7 +54,8 @@ export function createAdaServer(opts: AdaServerOptions) {
   const store = opts.store ?? new MemoryRoomStore();
   const service = new RoomService(store, opts.rng ?? cryptoRng(), now, opts.config.testVp ?? null, opts.config.testResources ?? null);
   const rate = opts.rateLimit ?? { capacity: 20, perSecond: 10 };
-  const createRate = opts.createLimit ?? { capacity: 10, perSecond: 10 / 60 };
+  const testCreate = opts.config.testCreateLimit ?? null;
+  const createRate = opts.createLimit ?? (testCreate ? { capacity: testCreate, perSecond: testCreate } : { capacity: 10, perSecond: 10 / 60 });
   const dropAfter = opts.dropAfterLimited ?? 100;
   const idleMs = opts.roomIdleMs ?? ROOM_IDLE_MS;
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { DESKTOP, MOBILE, shot } from './helpers';
 import { bankTowardRoad, doForced, mover, newTable, playSetup, startShort } from './table';
 

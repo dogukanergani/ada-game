@@ -22,6 +22,12 @@ export interface ServerConfig {
    * bank runs short), so a role such as the Soldier can be tried by hand. Same rule as testVp.
    */
   testResources: number | null;
+  /**
+   * TEST ONLY: how many rooms one address may create in a burst (and per second afterwards), in place of the usual 10 and one
+   * every six seconds. A long end-to-end run opens a room for nearly every test from one address and would otherwise be refused.
+   * Same rule as testVp.
+   */
+  testCreateLimit: number | null;
 }
 
 export function configFromEnv(env: Record<string, string | undefined> = process.env): ServerConfig {
@@ -37,8 +43,10 @@ export function configFromEnv(env: Record<string, string | undefined> = process.
   if (testSeed !== null && !Number.isInteger(testSeed)) throw new Error(`bad ADA_TEST_SEED: ${env.ADA_TEST_SEED}`);
   const testResources = env.NODE_ENV === 'test' && env.ADA_TEST_RESOURCES ? Number(env.ADA_TEST_RESOURCES) : null;
   if (testResources !== null && (!Number.isInteger(testResources) || testResources < 1 || testResources > 19)) throw new Error(`bad ADA_TEST_RESOURCES: ${env.ADA_TEST_RESOURCES}`);
+  const testCreateLimit = env.NODE_ENV === 'test' && env.ADA_TEST_CREATE_LIMIT ? Number(env.ADA_TEST_CREATE_LIMIT) : null;
+  if (testCreateLimit !== null && (!Number.isInteger(testCreateLimit) || testCreateLimit < 1 || testCreateLimit > 100_000)) throw new Error(`bad ADA_TEST_CREATE_LIMIT: ${env.ADA_TEST_CREATE_LIMIT}`);
   const clientDir = env.CLIENT_DIR?.trim() ? resolve(env.CLIENT_DIR.trim()) : defaultClientDir();
-  return { port, corsOrigins, secret: env.SERVER_SECRET?.trim() || null, clientDir, testVp, testSeed, testResources };
+  return { port, corsOrigins, secret: env.SERVER_SECRET?.trim() || null, clientDir, testVp, testSeed, testResources, testCreateLimit };
 }
 
 /** packages/client/dist next to this package, when it has been built */

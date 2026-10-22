@@ -34,7 +34,7 @@ function site() {
 describe('serving the built client', () => {
   it('serves files with the right types and caching, and falls back to index.html for app paths', async () => {
     const clientDir = site();
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null } });
     const index = await get(url, '/');
     expect(index.status).toBe(200);
     expect(index.body).toContain('<title>ada</title>');
@@ -55,7 +55,7 @@ describe('serving the built client', () => {
 
   it('never leaves the client folder', async () => {
     const clientDir = site();
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null } });
     for (const path of ['/../secret.txt', '/%2e%2e/secret.txt', '/..%2fsecret.txt', '/assets/../../secret.txt', '/%00', '/..\\secret.txt']) {
       const r = await get(url, path);
       expect(r.body, path).not.toContain('TOP SECRET');
@@ -64,7 +64,7 @@ describe('serving the built client', () => {
 
   it('leaves the socket path to socket.io, and a server with no client answers 404', async () => {
     const clientDir = site();
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null } });
     const c = await TestClient.login(url);
     expect(c.playerId).toBeTruthy();
     const none = await startServer();
@@ -89,7 +89,7 @@ describe('the test-only target score', () => {
 
   it('lowers the winning score of games the server starts, and a server without it uses the mode\'s', async () => {
     for (const [vp, expected] of [[3, 3], [null, 7]] as const) {
-      const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: vp, testSeed: null, testResources: null } });
+      const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: vp, testSeed: null, testResources: null, testCreateLimit: null } });
       const a = await TestClient.login(url);
       const b = await TestClient.login(url);
       const { code } = await a.emit('room:create', { name: 'A' });
@@ -126,7 +126,7 @@ describe('the test-only starting cards', () => {
   });
 
   async function started(n: number, testResources: number) {
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources, testCreateLimit: null } });
     const players: TestClient[] = [];
     for (let i = 0; i < n; i++) players.push(await TestClient.login(url));
     const { code } = await players[0].emit('room:create', { name: 'P0' });
@@ -155,5 +155,32 @@ describe('the test-only starting cards', () => {
     expect(new Set(counts).size).toBe(1);
     expect(counts[0]).toBe(19);
     for (const { view } of snaps) expect(view.bank).toEqual({ lumber: 0, brick: 0, wool: 0, grain: 0, ore: 0 });
+  });
+});
+
+describe('the test-only room creation limit', () => {
+  it('is read only when NODE_ENV is "test", and must be a whole number from 1 to 100000', () => {
+    expect(configFromEnv({ NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '500' }).testCreateLimit).toBe(500);
+    for (const env of [undefined, 'production', 'development', 'Test', 'testing']) {
+      expect(configFromEnv({ NODE_ENV: env, ADA_TEST_CREATE_LIMIT: '500' }).testCreateLimit, String(env)).toBeNull();
+    }
+    expect(configFromEnv({ NODE_ENV: 'test' }).testCreateLimit).toBeNull();
+    for (const bad of ['0', '100001', 'x', '2.5', '-1']) expect(() => configFromEnv({ NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: bad }), bad).toThrow();
+  });
+
+  it('a test server lets one address create many rooms at once; a server outside a test environment still refuses the 11th', async () => {
+    for (const [env, allowed] of [['test', true], ['production', false]] as const) {
+      const config = configFromEnv({ NODE_ENV: env, ADA_TEST_CREATE_LIMIT: '1000', CLIENT_DIR: '' });
+      // no createLimit option here: the config decides
+      const { url } = await startServer({ config: { ...config, port: 0, secret: 's', clientDir: null }, createLimit: undefined });
+      const refused: unknown[] = [];
+      for (let i = 0; i < 14; i++) {
+        const c = await TestClient.login(url);
+        const r = (await c.emit('room:create', { name: 'A' })) as { ok?: boolean; error?: { key: string } };
+        if (r.ok === false) refused.push(r.error?.key);
+      }
+      expect(refused.length > 0, `${env}: ${refused.length} refused`).toBe(!allowed);
+      if (!allowed) expect(new Set(refused)).toEqual(new Set(['rateLimited']));
+    }
   });
 });

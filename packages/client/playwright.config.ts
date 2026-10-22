@@ -25,10 +25,10 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /finish\.spec|capture\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'play', testIgnore: /finish\.spec|capture\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
     { name: 'capture', testMatch: /capture\.spec/, use: { baseURL: `http://localhost:${CAPTURE}` } },
-    { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },
+    { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec|seats\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },
     { name: 'offers-res', testMatch: /offer-visibility\.spec|edge-pick\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
   ],
   webServer: [
@@ -38,7 +38,7 @@ export default defineConfig({
       url: `http://localhost:${PLAY}/`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { PORT: String(PLAY), NODE_ENV: 'test', ADA_TEST_SEED: '20261020', SERVER_SECRET: 'e2e-secret' },
+      env: { PORT: String(PLAY), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261020', SERVER_SECRET: 'e2e-secret' },
     },
     {
       command: 'npm run start -w @ada/server',
@@ -46,7 +46,7 @@ export default defineConfig({
       url: `http://localhost:${FINISH}/`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { PORT: String(FINISH), NODE_ENV: 'test', ADA_TEST_SEED: '20261021', ADA_TEST_VP: '3', SERVER_SECRET: 'e2e-secret' },
+      env: { PORT: String(FINISH), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261021', ADA_TEST_VP: '3', SERVER_SECRET: 'e2e-secret' },
     },
     {
       command: 'npm run start -w @ada/server',
@@ -54,7 +54,7 @@ export default defineConfig({
       url: `http://localhost:${CAPTURE}/`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { PORT: String(CAPTURE), NODE_ENV: 'test', ADA_TEST_SEED: '20261022', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
+      env: { PORT: String(CAPTURE), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261022', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
     },
     {
       command: 'npm run start -w @ada/server',
@@ -62,7 +62,7 @@ export default defineConfig({
       url: `http://localhost:${OFFERS}/`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { PORT: String(OFFERS), NODE_ENV: 'test', ADA_TEST_SEED: '20261023', SERVER_SECRET: 'e2e-secret' },
+      env: { PORT: String(OFFERS), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261023', SERVER_SECRET: 'e2e-secret' },
     },
     {
       command: 'npm run start -w @ada/server',
@@ -70,7 +70,7 @@ export default defineConfig({
       url: `http://localhost:${OFFERS_RES}/`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { PORT: String(OFFERS_RES), NODE_ENV: 'test', ADA_TEST_SEED: '20261024', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
+      env: { PORT: String(OFFERS_RES), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261024', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
     },
   ],
 });

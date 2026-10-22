@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { DESKTOP, MOBILE, openPlayer, shot } from './helpers';
 
 for (const [size, viewport] of [['mobile', MOBILE], ['desktop', DESKTOP]] as const) {
