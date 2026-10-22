@@ -67,17 +67,38 @@ export interface Candidate {
   id: number;
   x: number;
   y: number;
+  /** a road or an edge is a line, not a point: a tap is measured to the line, not to its middle */
+  segment?: { x1: number; y1: number; x2: number; y2: number };
 }
 
-/** The candidate nearest to (x, y) within `maxDist`, or null. */
+/** Distance from (x, y) to the segment (x1, y1)-(x2, y2). */
+export function distanceToSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / len2));
+  return Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy));
+}
+
+const reachOf = (c: Candidate, x: number, y: number): number =>
+  c.segment ? distanceToSegment(x, y, c.segment.x1, c.segment.y1, c.segment.x2, c.segment.y2) : Math.hypot(c.x - x, c.y - y);
+
+/**
+ * The candidate nearest to (x, y) within `maxDist`, or null. A point candidate is measured to its point, a line
+ * (an edge) to the closest spot on it, so a tap near the end of a road picks that road and not a neighbour whose
+ * middle happens to be closer. Equal distances (a tap on a corner) go to the one whose middle is nearer.
+ */
 export function nearest(candidates: Candidate[], x: number, y: number, maxDist: number): Candidate | null {
   let best: Candidate | null = null;
   let bestD = maxDist;
+  let bestMid = Infinity;
   for (const c of candidates) {
-    const d = Math.hypot(c.x - x, c.y - y);
-    if (d <= bestD) {
+    const d = reachOf(c, x, y);
+    const mid = Math.hypot(c.x - x, c.y - y);
+    if (d < bestD - 1e-9 || (d <= bestD + 1e-9 && mid < bestMid)) {
       best = c;
-      bestD = d;
+      bestD = Math.min(d, bestD);
+      bestMid = mid;
     }
   }
   return best;
@@ -109,3 +130,11 @@ export const toUnits = (cam: Camera, width: number, height: number, px: number, 
   x: cam.cx + (px - width / 2) / cam.scale,
   y: cam.cy + (py - height / 2) / cam.scale,
 });
+
+/** The two ends of an edge, as a tap target. */
+export function segmentOf(topo: Topology, edge: number): { x1: number; y1: number; x2: number; y2: number } {
+  const e = topo.edges[edge];
+  const a = topo.vertices[e.a];
+  const b = topo.vertices[e.b];
+  return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+}

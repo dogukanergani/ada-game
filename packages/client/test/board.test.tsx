@@ -6,7 +6,7 @@ import {
 import { mulberry32 } from '../../game-core/sim/rng';
 import { Board, type BoardTarget } from '../src/board/Board';
 import { PLAYER_COLORS, PIECE_OUTLINE, SEA, TERRAIN_COLOR, contrast } from '../src/board/colors';
-import { boardGeometry, fitCamera, nearest, probabilityDots, viewBoxOf } from '../src/board/geometry';
+import { boardGeometry, fitCamera, nearest, probabilityDots, segmentOf, viewBoxOf } from '../src/board/geometry';
 import { I18nProvider } from '../src/i18n/context';
 
 beforeAll(() => {
@@ -182,5 +182,75 @@ describe('player colours', () => {
   it('are five different colours, none a terrain colour', () => {
     expect(new Set(PLAYER_COLORS).size).toBe(5);
     for (const c of PLAYER_COLORS) for (const terrain of Object.values(TERRAIN_COLOR)) expect(c.toLowerCase()).not.toBe(terrain.toLowerCase());
+  });
+});
+
+describe('tapping a road (every edge of every map, at the scale of a 360 px phone)', () => {
+  const maps = [
+    { id: 'classic19', n: 3, mode: 'standard' as GameMode },
+    { id: 'large30', n: 5, mode: 'standard' as GameMode },
+    { id: 'short14', n: 2, mode: 'short' as GameMode },
+  ];
+  /** the old measure: the road whose middle is nearest, and only within reach of its middle (null when none is) */
+  const byMiddle = (cands: { id: number; x: number; y: number }[], x: number, y: number, reach: number) => {
+    let best: number | null = null;
+    let bestD = reach;
+    for (const c of cands) {
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d <= bestD) {
+        bestD = d;
+        best = c.id;
+      }
+    }
+    return best;
+  };
+
+  for (const map of maps) {
+    for (const zoom of [1, 5]) {
+      it(`${map.id}: a fingertip on the line, anywhere along it up to its very end, picks that road (${zoom === 1 ? 'fitted' : 'zoomed in 5x'})`, () => {
+        const { view } = game(map.n, map.mode, false);
+        const geo = boardGeometry(view.map, view.harbors);
+        const { topo } = geo;
+        const scale = fitCamera(geo.box, 360, 320, 52).scale * zoom; // the board area of a 360x640 phone, at this zoom
+        const px = (n: number) => n / scale;
+        const cands = topo.edges.map((e, id) => ({ id, x: e.x, y: e.y, segment: segmentOf(topo, id) }));
+        let tried = 0;
+        let wrongNew = 0;
+        let wrongOld = 0;
+        for (const [id, e] of topo.edges.entries()) {
+          const a = topo.vertices[e.a];
+          const b = topo.vertices[e.b];
+          const len = Math.hypot(b.x - a.x, b.y - a.y);
+          const ux = (b.x - a.x) / len;
+          const uy = (b.y - a.y) / len;
+          for (const frac of [-0.45, -0.4, -0.3, -0.15, 0, 0.15, 0.3, 0.4, 0.45]) {
+            for (const across of [-2, 0, 2]) {
+              // closer than 3 px to a corner, three roads meet under the finger: no one road is meant
+              if ((0.5 - Math.abs(frac)) * len * scale < 3) continue;
+              const x = e.x + ux * frac * len - uy * px(across);
+              const y = e.y + uy * frac * len + ux * px(across);
+              tried++;
+              if (nearest(cands, x, y, px(30))?.id !== id) wrongNew++;
+              if (byMiddle(cands, x, y, px(30)) !== id) wrongOld++;
+            }
+          }
+        }
+        expect(tried).toBeGreaterThan(topo.edges.length * 10);
+        expect(wrongNew, `${map.id}: ${wrongNew} of ${tried} taps picked another road or none`).toBe(0);
+        // zoomed in, a road is longer than a finger's reach from its middle: the old measure lost the taps near the ends (the same as the browser test shows)
+        if (zoom === 5) expect(wrongOld, `${map.id}: the old measure got ${wrongOld} of ${tried} wrong`).toBeGreaterThan(0);
+      });
+    }
+  }
+
+  it('a tap near the end of one road picks it, where the middle of its neighbour is nearer', () => {
+    const a = { id: 1, x: 1, y: 0, segment: { x1: 0, y1: 0, x2: 2, y2: 0 } };
+    const b = { id: 2, x: 2.5, y: 0.5, segment: { x1: 2, y1: 0, x2: 3, y2: 1 } };
+    expect(nearest([a, b], 1.9, 0.05, 0.5)?.id).toBe(1);
+    expect(nearest([a, b], 2.4, 0.4, 0.5)?.id).toBe(2);
+    expect(nearest([a, b], 1.5, 3, 0.5)).toBeNull();
+    // the reach is measured to the line: a tap 0.3 off the middle is in, 0.6 is out
+    expect(nearest([a], 1, 0.3, 0.5)?.id).toBe(1);
+    expect(nearest([a], 1, 0.6, 0.5)).toBeNull();
   });
 });

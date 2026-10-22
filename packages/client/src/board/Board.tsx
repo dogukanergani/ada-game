@@ -6,7 +6,7 @@ import {
 } from './colors';
 import { CITY_PATH, DESERT_GLYPH, GLYPH_PATHS, HOUSE_PATH } from './glyphs';
 import {
-  boardGeometry, fitCamera, nearest, probabilityDots, tilePoints, toUnits, viewBoxOf, type Camera, type Candidate,
+  boardGeometry, fitCamera, nearest, probabilityDots, segmentOf, tilePoints, toUnits, viewBoxOf, type Camera, type Candidate,
 } from './geometry';
 
 export type PieceRef = { kind: PieceKind; id: number; valid: boolean };
@@ -31,6 +31,8 @@ interface Props {
 
 const ZOOM_MAX = 5;
 const ZOOM_MIN = 0.85;
+/** the invisible band around a road that takes a tap, in screen pixels across (a finger, not the thin drawn line) */
+const EDGE_HIT_PX = 44;
 /** how close a tap must land to a highlighted spot to choose it, in screen pixels */
 const TAP_RADIUS_PX = 30;
 const DRAG_PX = 6;
@@ -80,7 +82,7 @@ export function Board({ view, target, selected = null, onPick, production = null
   const candidates = useMemo<(Candidate & { kind: Pick['kind']; valid: boolean })[]>(() => {
     if (!target) return [];
     if (target.kind === 'vertex') return target.ids.map((id) => ({ id, kind: 'vertex', valid: true, x: topo.vertices[id].x, y: topo.vertices[id].y }));
-    if (target.kind === 'edge') return target.ids.map((id) => ({ id, kind: 'edge', valid: true, x: topo.edges[id].x, y: topo.edges[id].y }));
+    if (target.kind === 'edge') return target.ids.map((id) => ({ id, kind: 'edge', valid: true, x: topo.edges[id].x, y: topo.edges[id].y, segment: segmentOf(topo, id) }));
     if (target.kind === 'tile') return target.ids.map((id) => ({ id, kind: 'tile', valid: true, x: topo.tiles[id].x, y: topo.tiles[id].y }));
     return target.pieces.map((p) => ({
       id: p.id,
@@ -88,6 +90,7 @@ export function Board({ view, target, selected = null, onPick, production = null
       valid: p.valid,
       x: p.kind === 'road' ? topo.edges[p.id].x : topo.vertices[p.id].x,
       y: p.kind === 'road' ? topo.edges[p.id].y : topo.vertices[p.id].y,
+      segment: p.kind === 'road' ? segmentOf(topo, p.id) : undefined,
     }));
   }, [target, topo]);
 
@@ -328,6 +331,7 @@ export function Board({ view, target, selected = null, onPick, production = null
             const sel = isSelected('edge', id);
             return (
               <g key={id} className="spot spot-edge" data-edge={id} data-selected={sel} role="button" tabIndex={0} aria-label={t('board.edge', { id })} aria-pressed={sel} onKeyDown={(ev) => keyPick(ev, 'edge', id)}>
+                <line className="hit" x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={EDGE_HIT_PX / cam.scale} strokeLinecap="round" />
                 <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={PIECE_OUTLINE} strokeWidth={sel ? 0.26 : 0.2} strokeLinecap="round" />
                 <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={sel ? '#ffffff' : AMBER} strokeWidth={sel ? 0.16 : 0.1} strokeLinecap="round" strokeDasharray={sel ? undefined : '0.13 0.11'} />
               </g>
@@ -364,6 +368,7 @@ export function Board({ view, target, selected = null, onPick, production = null
               const b = topo.vertices[e.b];
               return (
                 <g key={`r${p.id}`} className="spot spot-piece" data-valid={p.valid} data-selected={sel} role="button" tabIndex={0} aria-label={t('board.piece', { piece: t('piece.road'), id: p.id })} aria-pressed={sel} onKeyDown={(ev) => keyPick(ev, 'road', p.id)}>
+                  <line className="hit" x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={EDGE_HIT_PX / cam.scale} strokeLinecap="round" />
                   <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={PIECE_OUTLINE} strokeWidth="0.3" strokeLinecap="round" />
                   <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={sel ? '#ffffff' : color} strokeWidth="0.18" strokeLinecap="round" strokeDasharray={sel ? undefined : '0.13 0.11'} />
                 </g>

@@ -25,11 +25,11 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /finish\.spec|capture\.spec|offer-visibility\.spec|hintline\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'play', testIgnore: /finish\.spec|capture\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
     { name: 'capture', testMatch: /capture\.spec/, use: { baseURL: `http://localhost:${CAPTURE}` } },
     { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },
-    { name: 'offers-res', testMatch: /offer-visibility\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
+    { name: 'offers-res', testMatch: /offer-visibility\.spec|edge-pick\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
   ],
   webServer: [
     {
