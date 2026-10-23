@@ -71,15 +71,20 @@ npm run typecheck
 npm run build
 npm run e2e          # build first; once: npx playwright install chromium
 npm run balance      # npm run balance -- --games=300 --seed=2
+                     # measure a candidate Soldier price list without changing the code:
+                     # npm run balance -- --costs="settlement=ore:2,wool:1/city=ore:3,wool:2,grain:2"
 ```
+
+The end-to-end servers use test-only switches (`ADA_TEST_SEED`, `ADA_TEST_VP`, `ADA_TEST_RESOURCES`, `ADA_TEST_CREATE_LIMIT`). They are read only when `NODE_ENV` is exactly `test`; a server test proves each is ignored anywhere else.
 
 ## Status and roadmap
 
-**Works today:** lobby with room codes, role selection, standard (10 points) and short (7 points) modes, three maps, the full turn cycle with bank/port/player trading, development cards, robber, longest road and largest army, five roles, reconnection after refresh or dropped connection, Turkish and English.
+**Works today:** lobby with room codes, role selection, standard (10 points) and short (7 points) modes, three maps, the full turn cycle with bank/port/player trading (a side-by-side give/get sheet), development cards, robber, longest road and largest army, five roles (the Soldier pays resources to demolish a rival's road, settlement or city), player seats round the board with points and card counts (never which cards), reconnection after refresh or dropped connection, Turkish and English.
 
 **Known gaps:**
 
-- Role balance is not settled: in bot simulations one role wins above its even share and another below it; real playtesting comes first. Details are in [docs/DECISIONS.md](docs/DECISIONS.md).
+- Role balance is not settled: in bot simulations one role wins above its even share and another below it; real playtesting comes first. The Soldier's demolition price was tuned against two bots (about −2.5 points from an even share with the greedy bot, −6 with the random bot). A known long-game case, where the Soldier grinds a rival down to one building and the game drags on, has a proposed guard that is **not** implemented. Details are in [docs/DECISIONS.md](docs/DECISIONS.md).
+- On a 360×640 phone the board is small in the Soldier's demolish mode (the preview panel takes room); pinch to zoom.
 - The 30-tile and 14-tile layouts and short mode with five players are assumptions not yet validated by human play.
 - Rooms are in memory only; no turn timer, accounts, matchmaking, spectators or chat.
 - Rate-limit values and longest-road cost under load have not been measured.
@@ -92,4 +97,4 @@ Design document: [docs/GDD.md](docs/GDD.md) (in Turkish). Decisions and assumpti
 
 ## Kısa Türkçe özet
 
-Ada, oda koduyla oynanan, tur tabanlı, 2–5 kişilik bir ada kurma oyunudur; klasik altıgen ada ticaret oyunlarından esinlenmiştir ve her oyuncu farklı bir rolle başlar. Sunucu otoritedir: istemciye yalnızca `viewFor` çıktısı gider, rakibin eli ve deste sırası asla gitmez. Kural motoru saf TypeScript'tir, metin değil olay üretir (tr/en çeviri istemcide). Güvenceler: botlarla yüzlerce oyunluk fuzz testi ve değişmezler, 200 tohumlu sızıntı taraması, tohumlu Playwright e2e. `npm install`, `npm run build`, `npm run start` ile tek süreçte http://localhost:3001 adresinde çalışır; canlıda `SERVER_SECRET` sabit olmalıdır. Güncel testler: 360 birim/entegrasyon + 36 e2e. Tasarım: [docs/GDD.md](docs/GDD.md).
+Ada, oda koduyla oynanan, tur tabanlı, 2–5 kişilik bir ada kurma oyunudur; klasik altıgen ada ticaret oyunlarından esinlenmiştir ve her oyuncu farklı bir rolle başlar. Sunucu otoritedir: istemciye yalnızca `viewFor` çıktısı gider, rakibin eli ve deste sırası asla gitmez. Kural motoru saf TypeScript'tir, metin değil olay üretir (tr/en çeviri istemcide). Güvenceler: botlarla yüzlerce oyunluk fuzz testi ve değişmezler, 200 tohumlu sızıntı taraması, tohumlu Playwright e2e. `npm install`, `npm run build`, `npm run start` ile tek süreçte http://localhost:3001 adresinde çalışır; canlıda `SERVER_SECRET` sabit olmalıdır. Güncel testler: 403 birim/entegrasyon + 105 e2e. Tasarım: [docs/GDD.md](docs/GDD.md).
