@@ -1846,6 +1846,10 @@ legend {
     min-height: 0;
     font-size: 14px;
   }
+  /* the 44 px touch area of the deck info reaches up into the 6 px gap above the dock (it holds no button; nothing is below the row but the next button, which it must not touch), so its row is 38 px tall */
+  .hint-row .info-dot {
+    margin-top: -6px;
+  }
 }
 
 /* the scroll anchor at the end of the log is not an entry: no number */
@@ -1854,42 +1858,51 @@ legend {
   height: 0;
 }
 
-/* ---------- deck info beside the buy button ---------- */
-.buy-cell {
-  position: relative;
+/* ---------- deck info: a 44 px touch area of its own, never over a button ---------- */
+.hint-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
-.buy-cell > .btn {
-  flex: 1;
+.hint-row .hint {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.buy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.buy-row > .btn {
+  flex: 1 1 auto;
 }
 .info-dot {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: start end;
-  padding: 3px;
+  flex: 0 0 auto;
+  min-width: var(--tap);
+  height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
   background: transparent;
   border: 0;
   cursor: pointer;
 }
-.info-dot span {
+.info-dot .info-mark {
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 1.5px solid currentColor;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1;
-  color: var(--muted);
-  background: var(--panel);
-}
-.btn[aria-disabled='true'] ~ .info-dot span {
   color: var(--muted);
 }
 

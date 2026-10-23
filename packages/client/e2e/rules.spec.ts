@@ -160,3 +160,52 @@ test('the rules from the home screen tell both targets', async ({ browser }) => 
   await page.getByRole('button', { name: 'Nasıl oynanır?' }).click();
   await expect(page.locator('[data-rules="win"]')).toHaveText('Sırası gelen oyuncu toplam puanı standart modda 10, kısa modda 7 olduğunda oyunu kazanır.');
 });
+
+for (const [size, viewport] of [['small', SMALL], ['mobile', MOBILE]] as const) {
+  test(`the deck info has a 44 px touch area that overlaps no button, and a tap near "Kart al" never opens it (${size})`, async ({ browser }) => {
+    const { seats } = await newTable(browser, ['Ada', 'Bora', 'Cem'], viewport);
+    await startShort(seats);
+    await playSetup(seats);
+    const seat = await mover(seats);
+    const { page } = seat;
+    const info = page.locator('[data-action="deck-info"]');
+    await expect(info).toBeVisible();
+
+    const rect = (loc: ReturnType<typeof page.locator>) => loc.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.x, y: r.y, w: r.width, h: r.height };
+    });
+    const box = await rect(info);
+    expect(box.w).toBeGreaterThanOrEqual(44);
+    expect(box.h).toBeGreaterThanOrEqual(44);
+    // no other button of the screen shares a single pixel with that touch area
+    const others = await page.locator('button:visible').evaluateAll((els, mine) =>
+      els
+        .filter((el) => el.getAttribute('data-action') !== 'deck-info')
+        .map((el) => ({ label: el.getAttribute('data-action') ?? el.textContent ?? '', r: el.getBoundingClientRect() }))
+        .filter(({ r }) => r.right > mine.x && r.left < mine.x + mine.w && r.bottom > mine.y && r.top < mine.y + mine.h)
+        .map(({ label }) => label),
+      box,
+    );
+    expect(others, `overlapped by: ${others.join(', ')}`).toEqual([]);
+
+    // taps all around the buy button open nothing but what they land on; the middle of the info area opens the deck
+    const buy = await rect(seat.action('buy'));
+    // points close to every edge and corner (the corners are rounded, so those are taken 8 px in)
+    const probes: [number, number][] = [
+      [buy.x + 8, buy.y + 8], [buy.x + buy.w - 8, buy.y + 8], [buy.x + buy.w - 8, buy.y + buy.h - 8], [buy.x + 8, buy.y + buy.h - 8],
+      [buy.x + buy.w / 2, buy.y + 3], [buy.x + buy.w - 3, buy.y + buy.h / 2], [buy.x + buy.w / 2, buy.y + buy.h - 3], [buy.x + 3, buy.y + buy.h / 2],
+    ];
+    for (const [x, y] of probes) {
+      const hit = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.closest('[data-action]')?.getAttribute('data-action') ?? null, [x, y]);
+      expect(hit, `a point of the buy button at (${Math.round(x)}, ${Math.round(y)}) hits ${hit}`).toBe('buy');
+    }
+    await shot(page, '33-deck-info-touch', size);
+    await page.mouse.click(box.x + box.w / 2, box.y + box.h / 2);
+    await expect(page.getByRole('dialog', { name: 'Gelişim destesi' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    // and the buy button still buys (or explains itself) on a tap in its middle, without opening the deck
+    await page.mouse.click(buy.x + buy.w / 2, buy.y + buy.h / 2);
+    await expect(page.getByRole('dialog', { name: 'Gelişim destesi' })).toHaveCount(0);
+  });
+}

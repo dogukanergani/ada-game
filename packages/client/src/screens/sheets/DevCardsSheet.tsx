@@ -144,7 +144,7 @@ export function DevCardsSheet({ view, legal, onClose, onBuy, send }: Props) {
         </section>
       )}
 
-      <div className="buy-cell wide">
+      <div className="buy-row">
       <button type="button" className="btn wide" data-action="buy-in-sheet" aria-disabled={!legal.canBuyDevCard} onClick={() => legal.canBuyDevCard && onBuy()}>
         {t('dev.buy')} · {t('dev.cost', { cost: handText(t, view.mine!.costs.devCard) })}
       </button>

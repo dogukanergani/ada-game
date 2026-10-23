@@ -91,9 +91,13 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
 
   return (
     <section className="dock" aria-label={t('hand.title')}>
-      <p className="hint" role="status" aria-live="polite">
-        {t(controls.hint.key, controls.hint.params)}
-      </p>
+      <div className="hint-row">
+        <p className="hint" role="status" aria-live="polite">
+          {t(controls.hint.key, controls.hint.params)}
+        </p>
+        {/* a row of its own, right above "Kart al": its 44 px touch area overlaps no button */}
+        {!placing && !forced && phase !== 'finished' && <DeckInfoButton left={deckCount} />}
+      </div>
       {blocked && (
         <p className="hint blocked" role="alert">
           {blocked}
@@ -137,17 +141,14 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
               {buildBtn('road')}
               {buildBtn('settlement')}
               {buildBtn('city')}
-              <div className="buy-cell">
-                <ActionButton
-                  id="buy"
-                  label={t('game.action.buy')}
-                  control={controls.buyDevCard}
-                  sub={shortReason(t, controls.buyDevCard.reason)}
-                  onBlocked={block}
-                  onClick={() => !busy && onBuyCard()}
-                />
-                <DeckInfoButton left={deckCount} />
-              </div>
+              <ActionButton
+                id="buy"
+                label={t('game.action.buy')}
+                control={controls.buyDevCard}
+                sub={shortReason(t, controls.buyDevCard.reason)}
+                onBlocked={block}
+                onClick={() => !busy && onBuyCard()}
+              />
             </div>
           </>
         )

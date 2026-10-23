@@ -151,6 +151,7 @@ export const tr = {
   'clock.label': 'Oyun süresi',
   'clock.minutes': '{n} dk',
   'clock.hours': '{h} sa {m} dk',
+  'deck.info.short': 'Deste',
   'deck.info.open': 'Gelişim destesinde neler var?',
   'deck.info.title': 'Gelişim destesi',
   'deck.info.contents': '{total} kart: {list}.',

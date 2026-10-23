@@ -148,6 +148,7 @@ export const en = {
   'clock.label': 'Game time',
   'clock.minutes': '{n} min',
   'clock.hours': '{h} h {m} min',
+  'deck.info.short': 'Deck',
   'deck.info.open': 'What is in the development deck?',
   'deck.info.title': 'Development deck',
   'deck.info.contents': '{total} cards: {list}.',

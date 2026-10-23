@@ -26,7 +26,8 @@ export function DeckInfoButton({ left }: { left: number }) {
   return (
     <>
       <button type="button" className="info-dot" data-action="deck-info" aria-haspopup="dialog" aria-label={t('deck.info.open')} onClick={() => setOpen(true)}>
-        <span aria-hidden="true">?</span>
+        <span className="info-mark" aria-hidden="true">?</span>
+        <span className="info-label" aria-hidden="true">{t('deck.info.short')}</span>
       </button>
       {open && <DeckInfoSheet left={left} onClose={() => setOpen(false)} />}
     </>
