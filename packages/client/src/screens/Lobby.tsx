@@ -5,7 +5,7 @@ import { useT } from '../i18n/context';
 import { hasKey, type MessageKey } from '../i18n';
 import { useApp } from '../net/app';
 import { storage } from '../net/storage';
-import { LanguageSwitch } from '../ui/LanguageSwitch';
+import { HeaderButtons } from '../ui/HeaderButtons';
 
 const roleKey = (id: string, part: 'name' | 'desc'): MessageKey | null => (hasKey(`role.${id}.${part}`) ? (`role.${id}.${part}` as MessageKey) : null);
 
@@ -73,7 +73,7 @@ export function Lobby({ lobby }: { lobby: LobbyView }) {
     <main className="lobby">
       <header className="screen-head">
         <h1>{t('lobby.title')}</h1>
-        <LanguageSwitch />
+        <HeaderButtons />
       </header>
 
       <CodeBadge code={lobby.code} />

@@ -37,4 +37,10 @@ export function createStorage(backend: () => KeyValueStore | null) {
   };
 }
 
+/** Forgets who this device is (the player token and the saved name); the language choice stays. */
+export function forgetIdentity(store: Pick<ReturnType<typeof createStorage>, 'remove'>): void {
+  store.remove('token');
+  store.remove('name');
+}
+
 export const storage = createStorage(() => (typeof localStorage === 'undefined' ? null : localStorage));

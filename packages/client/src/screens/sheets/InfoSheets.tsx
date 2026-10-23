@@ -4,6 +4,7 @@ import { countHand } from '../../game/controls';
 import { useT } from '../../i18n/context';
 import { handText } from '../../i18n/format';
 import type { LogEntry } from '../../net/store';
+import { CostTable } from '../../ui/CostTable';
 import { LogList } from '../../ui/LogList';
 import { ResourceIcon } from '../../ui/ResourceIcon';
 import { Sheet } from '../../ui/Sheet';
@@ -13,31 +14,10 @@ import { Stepper } from '../../ui/Stepper';
 export function CostsSheet({ view, onClose }: { view: GameView; onClose: () => void }) {
   const t = useT();
   const mine = view.mine!;
-  const rows = [
-    ['road', t('piece.road')],
-    ['settlement', t('piece.settlement')],
-    ['city', t('piece.city')],
-    ['devCard', t('costs.devCard')],
-  ] as const;
   return (
     <Sheet title={t('costs.title')} onClose={onClose}>
       <p className="field-hint">{t('costs.forRole')}</p>
-      <table className="cost-table">
-        <tbody>
-          {rows.map(([k, label]) => (
-            <tr key={k} data-cost={k}>
-              <th scope="row">{label}</th>
-              <td>
-                {RESOURCES.filter((r) => mine.costs[k][r] > 0).map((r) => (
-                  <span key={r} className="cost-item">
-                    <ResourceIcon resource={r} size={20} /> {mine.costs[k][r]} {t(`resource.${r}`)}
-                  </span>
-                ))}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <CostTable costs={mine.costs} />
       <h3>{t('costs.ratios')}</h3>
       <p className="field-hint">{t('costs.ratiosHelp')}</p>
       <ul className="ratio-list">

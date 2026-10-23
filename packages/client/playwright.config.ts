@@ -25,11 +25,11 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'play', testIgnore: /rules-forced\.spec|finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
     { name: 'demolish', testMatch: /demolish\.spec/, use: { baseURL: `http://localhost:${DEMOLISH}` } },
     { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec|seats\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },
-    { name: 'offers-res', testMatch: /offer-visibility\.spec|edge-pick\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
+    { name: 'offers-res', testMatch: /offer-visibility\.spec|edge-pick\.spec|seats-full\.spec|rules-forced\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
   ],
   webServer: [
     {

@@ -10,6 +10,7 @@ import { useApp } from '../net/app';
 import { ActionDock, type SheetName } from '../ui/ActionDock';
 import { DiceTray } from '../ui/DiceTray';
 import { DemolishPanel, type PreviewState } from '../ui/DemolishPanel';
+import { HeaderButtons } from '../ui/HeaderButtons';
 import { HandBar } from '../ui/HandBar';
 import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
 import { LogList } from '../ui/LogList';
@@ -137,6 +138,7 @@ export function GameScreen() {
     <div className="game" data-phase={view.phase}>
       <header className="game-top">
         <LastEvent view={view} log={shownLog} connected={connected} rolling={roll.rolling} />
+        <HeaderButtons locked={controls.forced !== null} />
       </header>
 
       <div className="game-table" data-players={view.players.length}>
