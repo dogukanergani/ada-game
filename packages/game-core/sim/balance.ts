@@ -39,6 +39,8 @@ export interface Measurement {
   byCount: Record<number, RoleTally>;
   byMode: Record<string, RoleTally>;
   unfinished: number;
+  /** which games hit the step cap: seed (to replay with `playOne`), players, mode, roles in seat order, and where they stood */
+  unfinishedGames: { seed: number; players: number; mode: GameMode; roles: string[]; turn: number; phase: string }[];
 }
 
 /** Plays one game to the end; returns the final state (phase 'finished' unless the step cap was hit). */
@@ -82,6 +84,7 @@ export function measure(moves: MoveFn, games: number, seed0: number): Measuremen
   const byCount: Record<number, RoleTally> = {};
   const byMode: Record<string, RoleTally> = { standard: newTally(), short: newTally() };
   let unfinished = 0;
+  const unfinishedGames: Measurement['unfinishedGames'] = [];
   let seed = seed0 * 100003;
   const newDemo = (): DemolitionStats => ({ games: 0, soldierGames: 0, demolitions: 0, soldierDemolitions: 0, soldierMainTurns: 0, soldierTurnsDemolishLegal: 0, soldierTurnsBigTargetLegal: 0, soldierOreAtTurnStart: 0, demolished: { played: 0, won: 0 }, notDemolished: { played: 0, won: 0 } });
   const demolitionStats: Record<number, DemolitionStats> = {};
@@ -102,8 +105,9 @@ export function measure(moves: MoveFn, games: number, seed0: number): Measuremen
         while (chosen.length < n) chosen.push(tied.splice(Math.floor(pickRng() * tied.length), 1)[0]);
         for (const r of chosen) plays[r]++;
         const facts: GameFacts = { demolitions: {}, mainTurns: {} };
-        const s = playOne(seed++, chosen, mode, moves, facts);
-        if (s.phase !== 'finished') { unfinished++; continue; }
+        const gameSeed = seed++;
+        const s = playOne(gameSeed, chosen, mode, moves, facts);
+        if (s.phase !== 'finished') { unfinished++; unfinishedGames.push({ seed: gameSeed, players: n, mode, roles: chosen, turn: s.turn, phase: s.phase }); continue; }
         for (const c of [demolitionStats[n], allDemolitionStats]) {
           c.games++;
           c.demolitions += Object.values(facts.demolitions).reduce((a, b) => a + b, 0);
@@ -129,7 +133,7 @@ export function measure(moves: MoveFn, games: number, seed0: number): Measuremen
       }
     }
   }
-  return { overall, byCount, byMode, unfinished, demolitionStats, allDemolitionStats };
+  return { overall, byCount, byMode, unfinished, unfinishedGames, demolitionStats, allDemolitionStats };
 }
 
 export const rate = (t: Tally) => (t.played ? t.won / t.played : NaN);

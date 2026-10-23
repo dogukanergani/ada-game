@@ -298,3 +298,52 @@ Biçim: tarih, karar, gerekçe, etiket. "Varsayım" etiketli maddeler GDD'de bel
 - Açgözlü botta kısa mod −12,6 puan, standart mod +2,5 (kısa oyun daha az tur, yıkım daha az işe yarıyor). Hiçbir oyun yarım kalmadı (adım sınırı 6000).
 - Eski ele geçirme ölçümüyle (yaklaşık −5,6; karşılanabilir tur %3) karşılaştırma: yıkım üç kat daha sık karşılanıyor, ama Asker hâlâ eşit paydanın altında, özellikle 3-5 oyuncuda ve kısa modda.
 - Hedef eşit paydadan ±5 puan: açgözlü botta tüm oyunlarda sınırda (−5,0, gürültü ±3,1), 3 ve 5 oyuncuda dışında; rastgele botta açıkça dışında. **Maliyet ayarı onay bekliyor; ayar yalnızca `DEMOLISH_COSTS`'u değiştirir.**
+
+#### Öneri (uygulanmadı): "erime" koruması
+- **Sorun** (denge ölçümünde bulundu): Asker rakipleri son yapı seviyesine kadar eritebilir (`lastBuilding` yalnızca elenmeyi önler) ve rakip toparlanamazsa oyun çok uzar. Örnek: rastgele botla tohum 100610 (4 oyuncu, standart mod, Asker oyuncusu 102 yıkım yaptı; rakipler tek şehir ve sıfır yola indi): **mevcut fiyatla 1725 turda, B2 fiyatıyla adım sınırında (6000) bitmedi.** Kilitlenme değil, çok uzun bir oyun. 1200 rastgele oyundan 1'i, açgözlü botta hiç, ama gerçek bir masada "yavaş çökme" olarak hissedilebilir. Mevcut kuralın bir ucudur, yeni fiyatlardan bağımsızdır.
+- **Önerilen koruma (senin fikrin, bir adaydan biri):** toplam yapı sayısı (yol + yerleşim + şehir) bir eşiğin altına inen oyuncu, **bir yapı daha kurana kadar** yıkım hedefi olamaz. Yeni, ayrı bir ret nedeni: `tooFewPieces` (+ `player`), yani dördüncü ayrı mesaj: "{player} oyuncusunun çok az yapısı kaldı (≤ N): toparlanana kadar korunuyor." Eşik tek bir sabit: `DEMOLISH_MIN_TARGET_PIECES`, `DEMOLISH_COSTS` ve `DEMOLISHES_PER_TURN` ile aynı yerde. Başlangıç değeri öneri olarak 4 (örn. 1 şehir + 3 yol, ya da 2 yerleşim + 2 yol); gerçek değer ölçümle seçilir.
+- **Nerede uygulanır:** `packages/game-core/src/roles/defs.ts`, `demolish.check` içinde; `countPieces(s, owner)` zaten orada hesaplanıyor (`theirs`, `lastBuilding` satırının yanında). `theirs.road + theirs.settlement + theirs.city <= DEMOLISH_MIN_TARGET_PIECES` ise `err('roleActionRefused', { reason: 'tooFewPieces', player: owner })`. `list()` ve `apply()` değişmez (`list` zaten `validate` üzerinden süzülür). Sıra: `protected`, **`tooFewPieces`**, `lastBuilding`, `settlementLimit`, para.
+- **Dokunulacak diğer yerler:** `packages/client/src/i18n/tr.ts` ve `en.ts` (`error.roleActionRefused.tooFewPieces`), `roles.test.ts` (eşiğin altı/üstü, yapı kurunca hedef olabilmek), `fuzz.test.ts` (`checkTransition`: bir yıkım yalnızca hedef eşiğin üstündeyken yapılır), sunucu `preview.test.ts` (ret nedeni ayrı), `DemolishPanel` değişmez (hata cümlesi çeviriden gelir). Protokol sürümü artmaz: yeni neden yalnızca bir ret nedenidir (eski bir istemci genel "bu yetenek şimdi kullanılamaz" cümlesine düşer).
+- **GDD:** "Roller" bölümünde son yapı koruması yazılı; bu eşik yeni bir kural olduğundan GDD'nin güncellenmesi gerekir (GDD'ye bu oturumda dokunulmadı).
+- **Alternatifler (karşılaştırma için):** (a) *puan eşiği*: halka açık puanı ≤ 2 olan oyuncu hedef olamaz (basit ve herkesçe anlaşılır, ama yolları alınan ama puanı yüksek oyuncuyu korumaz); (b) *artan koruma*: bir oyuncu her yıkıldığında koruması bir tur uzar (iki kez vurulan 2 tam tur, üç kez vurulan 3 tam tur korunur; erime yavaşlar ama durmaz); (c) *hedef başına yıkım sınırı*: bir oyuncu bir tam turda en çok N kez, tüm oyunda toplam en çok M kez yıkılabilir (oyun uzunluğuna kesin üst sınır, ama eşiğin keyfiliği daha çok).
+- **Ölçüm planı:** koruma uygulanırsa denge raporuna *ortalama oyun uzunluğu (tur)* ve *son yapıya inmiş oyuncu oranı* eklenir (ikisi de şimdi raporda yok) ve fiyat ayarı bu korumayla birlikte yeniden ölçülür: koruma Asker'in kazanma oranını düşürür (yıkımı sınırlar), yani fiyat kararı bundan sonra verilmelidir. **Karar Adım 4'ten ya da kapalı testten sonra.**
+
+#### Yıkım fiyatı adayları (ölçüldü, uygulanmadı; hücre başına 150 oyun, tohum 1)
+Yalnızca değişen kalemler yazılı; yol ve (belirtilmedikçe) şehir mevcut fiyatta. Mevcut yerleşim: 2 cevher + 1 koyun + 1 buğday; şehir: 3 cevher + 2 koyun + 2 buğday.
+
+| Aday | Yerleşim fiyatı | Şehir |
+| --- | --- | --- |
+| A | 1 cevher + 1 koyun + 1 buğday | 2 + 2 + 2 |
+| B1 | 1 cevher + 1 koyun + 1 buğday | mevcut |
+| B2 | mevcut | 2 cevher + 2 koyun + 2 buğday |
+| C | 2 cevher + **2 koyun** + 1 buğday | mevcut |
+| D1 | 2 cevher + 1 koyun (**buğdaysız**) | mevcut |
+| D2 | **1 cevher + 2 koyun** + 1 buğday | mevcut |
+
+Asker'in kazanma oranı (eşit paydadan puan farkı; gürültü tüm oyunlar ±3,1, 2/3/4/5 oyuncu ±8,9/±6,9/±5,5/±4,5, mod ±4,3):
+
+| Açgözlü bot | Tüm oyunlar | 2 oy. | 3 oy. | 4 oy. | 5 oy. | Standart | Kısa | Oyun başına yıkım | Karşılanan tur | Şehir/yerleşim hedefi |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Mevcut | %23,6 (−5,0) | −3,3 | −5,0 | −2,5 | −7,7 | %31,2 | %16,0 | 5,8 | %10,5 | %1,9 |
+| A | %33,5 (+4,9) | +10,0 | +9,4 | +5,4 | −0,3 | %41,9 | %25,0 | 7,5 | %10,5 | %3,2 |
+| B1 | %33,3 (+4,8) | +10,0 | +8,3 | +5,4 | −0,0 | %41,4 | %25,2 | 7,4 | %10,6 | %3,3 |
+| B2 | %23,6 (−5,0) | −3,3 | −3,3 | −3,8 | −7,7 | %31,0 | %16,2 | 5,9 | %10,5 | %2,0 |
+| C | %18,7 (−9,9) | −10,0 | −13,3 | −6,7 | −10,3 | %25,7 | %11,7 | 5,4 | %10,4 | %1,0 |
+| **D1** | **%27,0 (−1,5)** | +0,8 | −2,2 | −1,3 | −2,3 | %34,5 | %19,5 | 6,5 | %10,8 | %2,9 |
+| D2 | %25,1 (−3,5) | +6,7 | −2,2 | −3,3 | −8,3 | %34,0 | %16,2 | 5,9 | %9,9 | %1,7 |
+
+| Rastgele bot | Tüm oyunlar | 2 oy. | 3 oy. | 4 oy. | 5 oy. | Standart | Kısa | Oyun başına yıkım | Karşılanan tur | Şehir/yerleşim hedefi | Takılan oyun |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Mevcut | %19,4 (−9,2) | +0,8 | −14,4 | −11,3 | −8,3 | %20,7 | %18,1 | 4,9 | %12,3 | %2,3 | 0 |
+| A | %21,0 (−7,6) | +5,5 | −12,2 | −9,2 | −8,7 | %22,1 | %19,8 | 5,1 | %12,7 | %5,3 | 1 |
+| B1 | %20,9 (−7,7) | +4,6 | −12,2 | −9,2 | −8,7 | %21,9 | %19,8 | 5,1 | %12,7 | %5,4 | 1 |
+| B2 | %19,5 (−9,0) | +1,7 | −14,4 | −11,2 | −8,3 | %21,2 | %17,9 | 4,8 | %12,2 | %2,3 | 1 |
+| C | %19,3 (−9,3) | −4,2 | −14,4 | −9,2 | −8,3 | %20,2 | %18,3 | 4,8 | %12,7 | %1,2 | 0 |
+| **D1** | **%22,4 (−6,2)** | +3,3 | −10,0 | −7,1 | −7,0 | %22,6 | %22,1 | 4,9 | %12,1 | %4,2 | 0 |
+| D2 | %19,8 (−8,8) | 0,0 | −13,9 | −11,2 | −7,3 | %18,9 | %20,7 | 4,8 | %12,5 | %2,8 | 1 |
+
+- **C, mevcut fiyattan ucuz değil, bir koyun pahalıdır**; "ara" aday olmaz, mevcutun öte yanına gider: açgözlü −5,0 → −9,9 (beklendiği gibi). Ölçüldü ama ara nokta yerine bir kontrol olarak okunmalı.
+- **Etkinin kaynağı cevher ve buğday, koyun değil.** B1 (−1 cevher) +10 puan oynatıyor; C (+1 koyun) −5; D1 (−1 buğday) +3,5; D2 (−1 cevher +1 koyun) +1,5. Koyun fazla olduğu için (ortalama elde 10) fiyatı etkilemiyor, cevher ve buğday ise açgözlü botun şehir/gelişim için de harcadığı kaynaklar.
+- **D1 şimdiye kadarki en iyi ara nokta**: açgözlüde her satır hedefin (±5) içinde (en kötüsü −2,3), rastgelede en iyi sonuç (−6,2; hedefin 1,2 altı, gürültü ±3,1 içinde) ve takılan oyun yok. Standart mod +5,9, kısa mod −9,1: mod ayrımı tüm adaylarda var (kısa modda Asker'e zaman kalmıyor), bu fiyatla çözülmüyor.
+- **Dikkat:** hepsi tek tohum ve 150 oyun/hücre; D1'in −1,5'u ±3,1 gürültü içinde. Uygulamadan önce başka bir tohumla (örn. 2) mevcut ve D1'i yeniden ölçmek iyi olur.
+- Takılan oyun D2'de de aynı tohum (100610; bu kez 2024. turda `roll`'da): sorun fiyata değil, "erime" kuralına bağlı (yukarıdaki öneri).

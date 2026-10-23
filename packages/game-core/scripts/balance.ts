@@ -8,6 +8,9 @@
  *   npm run balance                       (random and greedy, 300 games per player count and mode)
  *   npm run balance -- --bot=greedy --games=300 --seed=7
  *   npm run balance -- --compact          (only the overall and per-player-count win rates)
+ *   npm run balance -- --costs="settlement=ore:1,wool:1,grain:1/city=ore:2,wool:2,grain:2"
+ *                                         (measure a candidate demolition price list without changing it in the code:
+ *                                          kinds are separated by /, a kind not named keeps its price)
  */
 import { DEMOLISH_COSTS, RESOURCES, type Hand } from '../src';
 import { MAX_STEPS, ROLE_IDS, gap, measure, type DemolitionStats, type MoveFn, type RoleTally } from '../sim/balance';
@@ -25,6 +28,22 @@ const strArg = (name: string, fallback: string): string => {
 const GAMES = arg('games', 300);
 const SEED = arg('seed', 1);
 const COMPACT = process.argv.includes('--compact');
+
+/** `--costs=...`: the prices to measure, in place of DEMOLISH_COSTS for this run only (the table in the code is not touched). */
+const COSTS_ARG = process.argv.find((a) => a.startsWith('--costs='))?.slice('--costs='.length);
+if (COSTS_ARG) {
+  for (const part of COSTS_ARG.split('/')) {
+    const [kind, list] = part.split('=');
+    if (kind !== 'road' && kind !== 'settlement' && kind !== 'city') throw new Error(`--costs: unknown piece "${kind}"`);
+    const hand: Hand = { lumber: 0, brick: 0, wool: 0, grain: 0, ore: 0 };
+    for (const item of (list ?? '').split(',').filter(Boolean)) {
+      const [r, n] = item.split(':');
+      if (!(RESOURCES as readonly string[]).includes(r) || !Number.isInteger(Number(n)) || Number(n) < 0) throw new Error(`--costs: bad item "${item}"`);
+      hand[r as keyof Hand] = Number(n);
+    }
+    DEMOLISH_COSTS[kind] = hand;
+  }
+}
 
 const BOTS: Record<string, MoveFn> = { random: randomMoves, greedy: greedyMoves };
 const botArg = strArg('bot', 'both');
@@ -71,10 +90,10 @@ console.log(
   `Balance report: ${GAMES} games per player count and mode, seed ${SEED}. Win rate = wins / games played. Expected = what equal skill would give (1 / player count).`,
 );
 const costText = (h: Hand) => RESOURCES.filter((r) => h[r] > 0).map((r) => `${h[r]} ${r}`).join(' + ');
-console.log(`Demolition costs (DEMOLISH_COSTS): road ${costText(DEMOLISH_COSTS.road)}; settlement ${costText(DEMOLISH_COSTS.settlement)}; city ${costText(DEMOLISH_COSTS.city)}.`);
+console.log(`${COSTS_ARG ? 'CANDIDATE demolition costs (measured only, the code is not changed)' : 'Demolition costs (DEMOLISH_COSTS)'}: road ${costText(DEMOLISH_COSTS.road)}; settlement ${costText(DEMOLISH_COSTS.settlement)}; city ${costText(DEMOLISH_COSTS.city)}.`);
 
 for (const botName of botNames) {
-  const { overall, byCount, byMode, unfinished, demolitionStats, allDemolitionStats } = measure(BOTS[botName], GAMES, SEED);
+  const { overall, byCount, byMode, unfinished, unfinishedGames, demolitionStats, allDemolitionStats } = measure(BOTS[botName], GAMES, SEED);
   console.log(`\n=================== ${botName} bots ===================`);
   print('All games', overall);
   for (let n = 2; n <= 5; n++) print(n + ' players', byCount[n]);
@@ -94,4 +113,5 @@ for (const botName of botNames) {
   );
   console.log('Differences smaller than the noise are not evidence; a table with fewer games per cell is noisier than the all-games line.');
   console.log(`\nUnfinished games (step cap ${MAX_STEPS}, left out of the rates): ${unfinished}`);
+  for (const g of unfinishedGames) console.log(`  seed ${g.seed}: ${g.players} players, ${g.mode} mode, roles ${g.roles.join('/')}, stopped in turn ${g.turn} (${g.phase})`);
 }
