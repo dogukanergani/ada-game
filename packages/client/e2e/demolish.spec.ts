@@ -1,5 +1,5 @@
 import { expect, test } from './test';
-import { shot } from './helpers';
+import { DESKTOP, MOBILE, SMALL, shot } from './helpers';
 import { doForced, mover, newTable, playSetup, type Seat } from './table';
 
 /**
@@ -36,8 +36,15 @@ async function untilTurnOf(seats: Seat[], seat: Seat) {
   throw new Error('it never became the soldier\'s turn');
 }
 
-test('the Soldier demolishes a rival settlement and then a road: mode, target, preview, confirm, both screens agree; the rival\'s last settlement is refused with its own reason', async ({ browser }) => {
-  const { seats } = await newTable(browser, ['Asker', 'Rakip']);
+const sizes = [
+  { label: 'mobile' as const, viewport: MOBILE },
+  { label: 'small' as const, viewport: SMALL },
+  { label: 'desktop' as const, viewport: DESKTOP },
+];
+
+for (const { label, viewport } of sizes) {
+test(`the Soldier demolishes a rival settlement and then a road: mode, target, preview, confirm, both screens agree; the rival's last settlement is refused with its own reason, ${label} (${viewport.width}x${viewport.height})`, async ({ browser }) => {
+  const { seats } = await newTable(browser, ['Asker', 'Rakip'], viewport);
   const [soldier, rival] = seats;
   await startWithRoles(seats);
   await playSetup(seats);
@@ -55,24 +62,24 @@ test('the Soldier demolishes a rival settlement and then a road: mode, target, p
   await expect(soldier.page.locator('.hint').first()).toContainText('Yıkmak istediğin');
   await expect(soldier.page.locator('.demolish .legend')).toContainText('Seçilebilir');
   await expect(soldier.action('confirm')).toHaveAttribute('aria-disabled', 'true');
-  await shot(soldier.page, '40-demolish-mode', 'mobile');
+  await shot(soldier.page, '40-demolish-mode', label);
 
   // ---- target and preview: a rival settlement ----
   const target = soldier.page.locator('.spot-piece[data-valid="true"][aria-label^="yerleşim"]').first();
   await expect(target).toBeVisible();
-  const label = (await target.getAttribute('aria-label'))!;
-  const vertex = Number(label.split(' ')[1]);
-  await soldier.tap(`.spot-piece[aria-label="${label}"]`);
+  const pieceLabel = (await target.getAttribute('aria-label'))!;
+  const vertex = Number(pieceLabel.split(' ')[1]);
+  await soldier.tap(`.spot-piece[aria-label="${pieceLabel}"]`);
   const panel = soldier.page.locator('.demolish[data-state="ok"]');
   await expect(panel).toBeVisible();
   // one sentence: the effect on the rival and the price (all from the server)
-  await expect(panel.locator('.demolish-sentence')).toHaveText('Rakip oyuncusunun yerleşimi yıkılır, 1 puan kaybeder. · bedel: 1 koyun, 1 buğday, 2 cevher');
+  await expect(panel.locator('.demolish-sentence')).toHaveText('Rakip oyuncusunun yerleşimi yıkılır, 1 puan kaybeder. · bedel: 1 koyun, 2 cevher');
   // only the rival's points change: the Soldier gains nothing
   const deltas = panel.locator('.points-delta li');
   await expect(deltas).toHaveCount(1);
   await expect(deltas.first()).toHaveText('Rakip: 2 → 1 puan');
   await expect(soldier.action('confirm')).toHaveAttribute('aria-disabled', 'false');
-  await shot(soldier.page, '41-demolish-preview', 'mobile');
+  await shot(soldier.page, '41-demolish-preview', label);
 
   // ---- confirm: the result is the same on both screens ----
   await soldier.confirm();
@@ -85,11 +92,11 @@ test('the Soldier demolishes a rival settlement and then a road: mode, target, p
   const after = await soldier.hand();
   expect(after.ore).toBe(before.ore - 2);
   expect(after.wool).toBe(before.wool - 1);
-  expect(after.grain).toBe(before.grain - 1);
+  expect(after.grain).toBe(before.grain); // a settlement costs no wheat
   // once per turn: the button is now off
   await expect(soldier.action('demolish')).toHaveAttribute('aria-disabled', 'true');
-  await shot(rival.page, '42-demolish-result-rival', 'mobile');
-  await shot(soldier.page, '43-demolish-result-soldier', 'mobile');
+  await shot(rival.page, '42-demolish-result-rival', label);
+  await shot(soldier.page, '43-demolish-result-soldier', label);
 
   // ---- next round: the rival has one settlement left, and it cannot be demolished ----
   await soldier.action('end').click();
@@ -102,7 +109,7 @@ test('the Soldier demolishes a rival settlement and then a road: mode, target, p
   // its own reason (the rival's last building), not a general "cannot"
   await expect(soldier.page.locator('.demolish [role="alert"]')).toHaveText('Rakip oyuncusunun son yapısı yıkılamaz. Başka bir hedef seç.');
   await expect(soldier.action('confirm')).toHaveAttribute('aria-disabled', 'true');
-  await shot(soldier.page, '44-demolish-refused', 'mobile');
+  await shot(soldier.page, '44-demolish-refused', label);
   // the refused piece changed nothing on the rival's screen
   await expect(rival.page.locator(`.pseat[data-player="${rivalId}"] .pseat-points`)).toHaveText(/^1\b/);
 
@@ -120,3 +127,4 @@ test('the Soldier demolishes a rival settlement and then a road: mode, target, p
     await expect(s.page.locator('.last-text')).toContainText('bir yolunu yıktı');
   }
 });
+}

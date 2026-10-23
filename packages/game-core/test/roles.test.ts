@@ -250,7 +250,7 @@ describe('soldier: demolish', () => {
   it('the costs are one table with the three prices, and nothing else in the rules names a price', () => {
     expect(DEMOLISH_COSTS).toEqual({
       road: hand({ ore: 1, wool: 1 }),
-      settlement: hand({ ore: 2, wool: 1, grain: 1 }),
+      settlement: hand({ ore: 2, wool: 1 }),
       city: hand({ ore: 3, wool: 2, grain: 2 }),
     });
     expect(DEMOLISHES_PER_TURN).toBe(1);
@@ -280,12 +280,12 @@ describe('soldier: demolish', () => {
     for (const r of RESOURCES) expect(sum(s, r)).toBe(19);
   });
 
-  it('demolishes a settlement (2 ore, 1 wool, 1 grain): it is gone, its owner loses 1 point, the Soldier gains nothing', () => {
+  it('demolishes a settlement (2 ore, 1 wool): it is gone, its owner loses 1 point, the Soldier gains nothing', () => {
     let { s, spread } = war();
     const points = publicPoints(s, 'p0');
     s = act(s, 'p0', demolish('settlement', spread[0]));
     expect(s.buildings[spread[0]]).toBeUndefined();
-    expect(s.players[0].hand).toEqual(hand({ ore: 3, wool: 2, grain: 2 }));
+    expect(s.players[0].hand).toEqual(hand({ ore: 3, wool: 2, grain: 3 }));
     expect(publicPoints(s, 'p1')).toBe(3);
     expect(publicPoints(s, 'p0')).toBe(points);
     expect(piecesOf(s, 'p1').settlement).toBe(1);
@@ -315,7 +315,7 @@ describe('soldier: demolish', () => {
     const toCorner = topo.vertices[spread[0]].edges.find((e) => s.roads[e] === undefined)!;
     putRoad(s, toCorner, 'p2');
     s.players[0].hand = hand();
-    give(s, 'p0', hand({ ore: 2, wool: 1, grain: 1 }));
+    give(s, 'p0', hand({ ore: 2, wool: 1 }));
     give(s, 'p2', hand({ lumber: 1, brick: 1, wool: 1, grain: 1 }));
     const build: Action = { type: 'placeSettlement', vertex: spread[0] };
     s.current = 'p2';
@@ -494,7 +494,7 @@ describe('soldier: demolish', () => {
       const far = vertexAwayFrom(s, [between]);
       putBuilding(s, far, 'p1');
       expect(longestRoadFor(s, 'p2')).toBeLessThan(5);
-      give(s, 'p0', hand({ ore: 2, wool: 1, grain: 1 }));
+      give(s, 'p0', hand({ ore: 2, wool: 1 }));
       s = act(s, 'p0', demolish('settlement', between));
       expect(longestRoadFor(s, 'p2')).toBe(5);
       expect(s.longestRoad).toEqual({ holder: 'p2', length: 5 });

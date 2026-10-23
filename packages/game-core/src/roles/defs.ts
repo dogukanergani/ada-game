@@ -18,7 +18,7 @@ import type { RoleActionDef, RoleDef } from './types';
  */
 export const DEMOLISH_COSTS: Record<PieceKind, Hand> = {
   road: { lumber: 0, brick: 0, wool: 1, grain: 0, ore: 1 },
-  settlement: { lumber: 0, brick: 0, wool: 1, grain: 1, ore: 2 },
+  settlement: { lumber: 0, brick: 0, wool: 1, grain: 0, ore: 2 },
   city: { lumber: 0, brick: 0, wool: 2, grain: 2, ore: 3 },
 };
 export const DEMOLISHES_PER_TURN = 1;

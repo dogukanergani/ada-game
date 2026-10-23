@@ -16,6 +16,7 @@ describe('the deck detector', () => {
 });
 
 describe('the old check\'s false alarm', () => {
+  // seed 10 starts with a short deck (every fifth game does, see leak-sweep.ts), so the deck certainly runs empty in it
   it('reproduces from a seed and is an empty development deck matching "[]" in innocent data', async () => {
     const hits: { deckLen: number; needle: string; context: string }[] = [];
     const first = await game(10, ({ payload, after }) => {

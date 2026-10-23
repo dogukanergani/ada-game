@@ -189,7 +189,7 @@ Her oyuncu lobide bir rol seçer, seçmeyene kalan rollerden biri rastgele veril
 | Hedef | Maliyet (öneri) | Etkisi |
 | --- | --- | --- |
 | Yol | 1 cevher, 1 koyun | Yol yıkılır ve sahibinin stoğuna döner; en uzun yol yeniden hesaplanır |
-| Yerleşim (köy) | 2 cevher, 1 koyun, 1 buğday | Yerleşim yıkılır ve sahibinin stoğuna döner; sahibi 1 puan kaybeder |
+| Yerleşim (köy) | 2 cevher, 1 koyun | Yerleşim yıkılır ve sahibinin stoğuna döner; sahibi 1 puan kaybeder |
 | Şehir | 3 cevher, 2 koyun, 2 buğday | Şehir yerleşime düşer (şehir parçası sahibinin stoğuna döner); sahibi 1 puan kaybeder |
 
 - Turda en fazla 1 yıkım yapılır; yıkım kazanç sağlamadığı için maliyetler eski ele geçirme maliyetlerine göre düşürüldü.

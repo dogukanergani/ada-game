@@ -113,7 +113,7 @@ const samples: Record<GameEvent['type'], GameEvent[]> = {
   largestArmyChanged: [{ type: 'largestArmyChanged', holder: 'a', size: 3 }, { type: 'largestArmyChanged', holder: null, size: 0 }],
   demolished: [
     { type: 'demolished', player: 'a', from: 'b', kind: 'city', id: 3, cost: hand({ wool: 2, grain: 2, ore: 3 }) },
-    { type: 'demolished', player: 'a', from: 'b', kind: 'settlement', id: 3, cost: hand({ wool: 1, grain: 1, ore: 2 }) },
+    { type: 'demolished', player: 'a', from: 'b', kind: 'settlement', id: 3, cost: hand({ wool: 1, ore: 2 }) },
     { type: 'demolished', player: 'a', from: 'b', kind: 'road', id: 3, cost: hand({ wool: 1, ore: 1 }) },
   ],
   turnEnded: [{ type: 'turnEnded', player: 'a' }],

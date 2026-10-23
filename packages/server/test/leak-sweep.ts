@@ -1,6 +1,6 @@
 import { afterAll, expect, it } from 'vitest';
 import { mulberry32 } from '../../game-core/sim/rng';
-import { assertNoLeak, playOut, setup, type Inspection } from './gameplay';
+import { assertNoLeak, playOut, setup, stateOf, type Inspection } from './gameplay';
 
 /**
  * Secret-information sweep. The server's rng is injected (seeded), so every
@@ -9,11 +9,23 @@ import { assertNoLeak, playOut, setup, type Inspection } from './gameplay';
 const serverRng = (seed: number) => mulberry32(seed * 31 + 1);
 const playersFor = (seed: number) => 2 + (seed % 4);
 
+/**
+ * Every fifth game starts with a short deck, so that the deck certainly runs empty in every window of seeds (the case the old check got
+ * wrong), whatever the bots do. Left to chance it depended on how the bots play: any change to a role or to a price moved which games
+ * emptied the deck and broke the sweeps one window at a time. The first 8 cards of the order are kept, so a stretch of 6 can still leak.
+ */
+export const SHORT_DECK_EVERY = 5;
+export const SHORT_DECK = 8;
+
 export async function game(seed: number, inspect?: (i: Inspection) => void) {
   const n = playersFor(seed);
   const { server, players, code } = await setup(n, 'short', serverRng(seed));
   await players[0].emit('lobby:start');
   for (const p of players) await p.until('game:snapshot');
+  if (seed % SHORT_DECK_EVERY === 0) {
+    const g = stateOf(server, code);
+    g.devDeck.splice(0, g.devDeck.length - SHORT_DECK);
+  }
   const result = await playOut(server, code, players, seed, { inspect });
   for (const p of players) p.socket.close();
   await server.close();
