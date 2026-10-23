@@ -63,7 +63,7 @@ npm run start           # http://localhost:3001
 | End to end | Playwright, two mobile contexts, seeded test servers: lobby, setup, dice, trade, a full short game, the Soldier's demolition, reconnection | `packages/client/e2e` |
 | Balance report | Role win rates from random and greedy bots across player counts and modes (a report, not a pass/fail test) | `packages/game-core/scripts/balance.ts` |
 
-Current counts from `npm test`: **143** client + **164** game-core + **96** server = **403** unit/integration tests passing. `npm run e2e` runs **103** Playwright scenarios.
+Current counts from `npm test`: **143** client + **164** game-core + **96** server = **403** unit/integration tests passing. `npm run e2e` runs **105** Playwright scenarios.
 
 ```bash
 npm test             # all unit, fuzz, leak and server tests

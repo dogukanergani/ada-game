@@ -766,14 +766,30 @@ select {
   top: auto;
   bottom: calc(100% + 4px);
 }
+/* the narrowest phones (360 px): four rivals share one row and a count may have two digits, so every gap is taken in */
 @media (max-width: 400px) {
+  .seats {
+    padding: 6px 4px 4px;
+    gap: 3px;
+  }
+  .pseat-btn {
+    gap: 3px;
+    padding: 2px 3px;
+  }
   .pseat-avatar {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+  }
+  .pseat-points {
+    font-size: 15px;
+    gap: 2px;
   }
   .pseat-counts {
-    gap: 3px;
+    gap: 2px;
     font-size: 10.5px;
+  }
+  .pseat-count {
+    gap: 1px;
   }
 }
 /* a wide screen: the name and the role are written out, the seats are larger */
@@ -1385,10 +1401,22 @@ legend {
 .demolish .points-delta {
   margin: 0;
 }
+/* the preview is read at a glance and sits under the board: a smaller type and tighter lines leave the board its room on a short phone */
+.demolish .stack {
+  gap: 4px;
+}
+.demolish-sentence {
+  font-size: 15px;
+  line-height: 1.3;
+}
+.demolish .points-delta {
+  gap: 2px;
+  font-size: 14px;
+}
 .demolish .legend {
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 2px 12px;
   font-size: 13px;
 }
 

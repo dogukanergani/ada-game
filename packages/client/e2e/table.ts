@@ -90,9 +90,11 @@ export async function startShort(seats: Seat[]) {
  */
 export async function doForced(seat: Seat): Promise<boolean> {
   const { page } = seat;
-  // a discard sheet: raise the amounts until the sheet says the count is right
+  // a discard sheet: raise the amounts until the sheet says the count is right. A moment in which no "+" is on (the sheet is
+  // being drawn again) is waited out; and if the count is still not right after a fair time, the test fails at once and says
+  // what the sheet showed, instead of waiting for the discard button for the whole of the test's timeout.
   if ((await seat.action('discard').count()) > 0) {
-    for (let guard = 0; guard < 40; guard++) {
+    for (let guard = 0; guard < 150; guard++) {
       if (await seat.can('discard')) break;
       const plus = page.getByRole('dialog').getByRole('button', { name: /artır$/ });
       const n = await plus.count();
@@ -103,7 +105,11 @@ export async function doForced(seat: Seat): Promise<boolean> {
           clicked = true;
         }
       }
-      if (!clicked) break;
+      if (!clicked) await page.waitForTimeout(100);
+    }
+    if (!(await seat.can('discard'))) {
+      const shown = await page.getByRole('dialog').innerText().catch(() => '(no dialog)');
+      throw new Error(`the discard sheet never reached its count: ${shown.replace(/\s+/g, ' ')}`);
     }
     await seat.action('discard').click();
     return true;
