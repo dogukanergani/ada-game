@@ -59,7 +59,7 @@ describe('storage', () => {
 const lobby = (over: Partial<LobbyView> = {}): LobbyView => ({
   code: 'KMTP', me: 'a', hostId: 'a', mode: 'standard', phase: 'lobby', minPlayers: 2, maxPlayers: 5, players: [], ...over,
 });
-const payload = (events: GamePayload['events'] = []): GamePayload => ({ view: { me: 'a', phase: 'setup' } as never, legal: { phase: 'setup' } as never, events });
+const payload = (events: GamePayload['events'] = []): GamePayload => ({ view: { me: 'a', phase: 'setup' } as never, legal: { phase: 'setup' } as never, events, clock: { elapsedMs: 0, running: true } });
 const run = (msgs: Msg[], from: AppState = initialState) => msgs.reduce(reducer, from);
 
 describe('the store', () => {

@@ -82,6 +82,15 @@ export interface LobbyView {
 /** Notices about other players' connections; the client turns them into text. */
 export type PresenceNotice = { type: 'playerDisconnected'; player: string } | { type: 'playerReconnected'; player: string };
 
+/**
+ * How long the game has been going, worked out by the server (the client's clock is never trusted): milliseconds since the game
+ * started, and whether it is still running (a finished game's time stands still). The client counts on from the moment it arrived.
+ */
+export interface GameClock {
+  elapsedMs: number;
+  running: boolean;
+}
+
 export interface GamePayload {
   /** this player's own view; the only game data a client ever receives */
   view: GameView;
@@ -89,6 +98,8 @@ export interface GamePayload {
   events: GameEvent[];
   /** what this player may do now: their own options only */
   legal: LegalMoves;
+  /** the game's running time (server time) */
+  clock: GameClock;
 }
 
 /**

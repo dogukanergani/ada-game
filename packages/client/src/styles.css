@@ -1853,3 +1853,59 @@ legend {
   list-style: none;
   height: 0;
 }
+
+/* ---------- deck info beside the buy button ---------- */
+.buy-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.buy-cell > .btn {
+  flex: 1;
+}
+.info-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: start end;
+  padding: 3px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.info-dot span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--panel);
+}
+.btn[aria-disabled='true'] ~ .info-dot span {
+  color: var(--muted);
+}
+
+/* ---------- the game clock in the top row ---------- */
+.game-clock {
+  flex: 0 0 auto;
+  min-width: 3.4em;
+  text-align: center;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.rules-win {
+  margin: 0;
+  font-weight: 600;
+}

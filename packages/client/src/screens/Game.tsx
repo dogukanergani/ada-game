@@ -10,6 +10,7 @@ import { useApp } from '../net/app';
 import { ActionDock, type SheetName } from '../ui/ActionDock';
 import { DiceTray } from '../ui/DiceTray';
 import { DemolishPanel, type PreviewState } from '../ui/DemolishPanel';
+import { GameClock } from '../ui/GameClock';
 import { HeaderButtons } from '../ui/HeaderButtons';
 import { HandBar } from '../ui/HandBar';
 import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
@@ -138,6 +139,7 @@ export function GameScreen() {
     <div className="game" data-phase={view.phase}>
       <header className="game-top">
         <LastEvent view={view} log={shownLog} connected={connected} rolling={roll.rolling} />
+        <GameClock clock={state.clock} />
         <HeaderButtons locked={controls.forced !== null} vpToWin={view.vpToWin} />
       </header>
 
@@ -167,6 +169,7 @@ export function GameScreen() {
           selection={confirmable ? label(pick!) : null}
           busy={busy}
           moment={moment}
+          deckCount={view.devDeckCount}
           onRoll={() => void send({ type: 'roll' })}
           onEnd={() => void send({ type: 'endTurn' })}
           onBuyCard={() => void send({ type: 'buyDevCard' })}

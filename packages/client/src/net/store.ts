@@ -49,6 +49,8 @@ export interface AppState {
   /** counts every game payload (update or snapshot): a newer one means what was being shown is stale */
   rev: number;
   lastRoll: RollRecord | null;
+  /** the game's running time as the server last told it, with the monotonic moment (`performance.now()`) it arrived at */
+  clock: { elapsedMs: number; running: boolean; at: number } | null;
 }
 
 export const initialState: AppState = {
@@ -62,13 +64,14 @@ export const initialState: AppState = {
   notice: null,
   rev: 0,
   lastRoll: null,
+  clock: null,
 };
 
 export type Msg =
   | { t: 'conn'; status: ConnStatus; attempt?: number }
   | { t: 'hello'; playerId: string }
   | { t: 'lobby'; lobby: LobbyView }
-  | { t: 'game'; kind: 'snapshot' | 'update'; payload: GamePayload }
+  | { t: 'game'; kind: 'snapshot' | 'update'; payload: GamePayload; /** monotonic arrival time, taken where the message is received */ at?: number }
   | { t: 'presence'; notice: PresenceNotice }
   | { t: 'error'; error: ServerError }
   | { t: 'leftRoom' }
@@ -84,7 +87,7 @@ export function reducer(s: AppState, m: Msg): AppState {
       return { ...s, playerId: m.playerId };
     case 'lobby':
       // a lobby view means no game is running (or it is finished and the lobby is shown beside it)
-      return m.lobby.phase === 'lobby' ? { ...s, lobby: m.lobby, game: null, log: [], lastRoll: null } : { ...s, lobby: m.lobby };
+      return m.lobby.phase === 'lobby' ? { ...s, lobby: m.lobby, game: null, log: [], lastRoll: null, clock: null } : { ...s, lobby: m.lobby };
     case 'game': {
       const entries = m.payload.events.map((event, i) => ({ id: s.nextId + i, event }));
       const rolled = m.kind === 'update' ? entries.find((e) => e.event.type === 'diceRolled') : undefined;
@@ -93,6 +96,7 @@ export function reducer(s: AppState, m: Msg): AppState {
         rev: s.rev + 1,
         lastRoll: rolled ? rollRecord(s.lastRoll?.seq ?? 0, rolled, entries) : s.lastRoll,
         game: { view: m.payload.view, legal: m.payload.legal },
+        clock: m.payload.clock ? { ...m.payload.clock, at: m.at ?? 0 } : s.clock,
         log: [...s.log, ...entries].slice(-LOG_LIMIT),
         nextId: s.nextId + entries.length,
       };
@@ -102,7 +106,7 @@ export function reducer(s: AppState, m: Msg): AppState {
     case 'error':
       return { ...s, notice: { id: s.nextId, kind: 'error', error: m.error }, nextId: s.nextId + 1 };
     case 'leftRoom':
-      return { ...s, lobby: null, game: null, log: [], lastRoll: null };
+      return { ...s, lobby: null, game: null, log: [], lastRoll: null, clock: null };
     case 'dismiss':
       return { ...s, notice: null };
   }

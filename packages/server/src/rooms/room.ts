@@ -1,5 +1,5 @@
 import type { GameMode, GameState, RoleId } from '@ada/game-core';
-import type { ErrorKey, RoomPhase, ServerError } from '@ada/protocol';
+import type { ErrorKey, GameClock, RoomPhase, ServerError } from '@ada/protocol';
 
 export interface Seat {
   playerId: string;
@@ -25,6 +25,17 @@ export interface Room {
   game: GameState | null;
   /** when the last connected player left; null while anyone is connected */
   emptySince: number | null;
+  /** server time (ms) when the game was started; null in a lobby */
+  startedAt: number | null;
+  /** server time (ms) when the game finished; null while it runs */
+  endedAt: number | null;
+}
+
+/** The game's running time as the server sees it at `now`; a finished game stands still. */
+export function clockFor(room: Room, now: number): GameClock {
+  if (room.startedAt === null) return { elapsedMs: 0, running: false };
+  const end = room.endedAt ?? now;
+  return { elapsedMs: Math.max(0, end - room.startedAt), running: room.endedAt === null };
 }
 
 export const fail = (key: ErrorKey, detail: Record<string, unknown> = {}): { ok: false; error: ServerError } => ({

@@ -40,8 +40,8 @@ export class Connection {
       if (!this.stopped) dispatch({ t: 'conn', status: 'reconnecting', attempt: n });
     });
     this.socket.on('lobby:update', (lobby: LobbyView) => dispatch({ t: 'lobby', lobby }));
-    this.socket.on('game:snapshot', (payload: GamePayload) => dispatch({ t: 'game', kind: 'snapshot', payload }));
-    this.socket.on('game:update', (payload: GamePayload) => dispatch({ t: 'game', kind: 'update', payload }));
+    this.socket.on('game:snapshot', (payload: GamePayload) => dispatch({ t: 'game', kind: 'snapshot', payload, at: performance.now() }));
+    this.socket.on('game:update', (payload: GamePayload) => dispatch({ t: 'game', kind: 'update', payload, at: performance.now() }));
     this.socket.on('presence', (notice: PresenceNotice) => dispatch({ t: 'presence', notice }));
     this.socket.on('replaced', () => {
       // another tab took this identity; do not fight for it by reconnecting

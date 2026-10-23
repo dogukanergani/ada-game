@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { blockMoment, blockedNow, type BlockedNote, type BuildKind, type Control, type GameControls, type Mode } from '../game/controls';
 import { useT } from '../i18n/context';
 import type { MessageKey } from '../i18n';
+import { DeckInfoButton } from './DeckInfo';
 import { reasonText, shortReason } from './reasons';
 
 export type SheetName = 'trade' | 'cards' | 'costs' | 'log';
@@ -25,6 +26,8 @@ interface Props {
   onScores?: () => void;
   /** turn, phase and whose move: the explanation of a blocked button belongs to one such moment and goes with it */
   moment?: string;
+  /** cards left in the development deck (public), for the deck info beside the buy button */
+  deckCount?: number;
 }
 
 /** One action: enabled only when the server says it is legal; a disabled one stays tappable and explains itself. */
@@ -59,7 +62,7 @@ function ActionButton({
   );
 }
 
-export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onBuyCard, onMode, onSheet, onConfirm, onCancel, extra, onScores, moment = '' }: Props) {
+export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onBuyCard, onMode, onSheet, onConfirm, onCancel, extra, onScores, moment = '', deckCount = 0 }: Props) {
   const t = useT();
   const [note, setNote] = useState<BlockedNote | null>(null);
   const here = blockMoment(moment, mode);
@@ -134,14 +137,17 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
               {buildBtn('road')}
               {buildBtn('settlement')}
               {buildBtn('city')}
-              <ActionButton
-                id="buy"
-                label={t('game.action.buy')}
-                control={controls.buyDevCard}
-                sub={shortReason(t, controls.buyDevCard.reason)}
-                onBlocked={block}
-                onClick={() => !busy && onBuyCard()}
-              />
+              <div className="buy-cell">
+                <ActionButton
+                  id="buy"
+                  label={t('game.action.buy')}
+                  control={controls.buyDevCard}
+                  sub={shortReason(t, controls.buyDevCard.reason)}
+                  onBlocked={block}
+                  onClick={() => !busy && onBuyCard()}
+                />
+                <DeckInfoButton left={deckCount} />
+              </div>
             </div>
           </>
         )

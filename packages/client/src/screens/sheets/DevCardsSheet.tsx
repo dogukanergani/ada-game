@@ -3,6 +3,7 @@ import { DEV_CARD_KINDS, RESOURCES, type DevCardKind, type GameView, type LegalM
 import { useT } from '../../i18n/context';
 import type { MessageKey } from '../../i18n';
 import { handText } from '../../i18n/format';
+import { DeckInfoButton } from '../../ui/DeckInfo';
 import { ResourceIcon } from '../../ui/ResourceIcon';
 import { Sheet } from '../../ui/Sheet';
 
@@ -143,9 +144,12 @@ export function DevCardsSheet({ view, legal, onClose, onBuy, send }: Props) {
         </section>
       )}
 
+      <div className="buy-cell wide">
       <button type="button" className="btn wide" data-action="buy-in-sheet" aria-disabled={!legal.canBuyDevCard} onClick={() => legal.canBuyDevCard && onBuy()}>
         {t('dev.buy')} · {t('dev.cost', { cost: handText(t, view.mine!.costs.devCard) })}
       </button>
+      <DeckInfoButton left={view.devDeckCount} />
+      </div>
     </Sheet>
   );
 }

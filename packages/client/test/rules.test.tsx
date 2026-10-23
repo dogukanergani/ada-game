@@ -1,9 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { viewFor, BASE_COSTS, DEMOLISH_COSTS, DEV_CARD_COST, DEV_DECK_COMPOSITION, DEV_CARD_KINDS, RESOURCES, ROLE_LIST } from '@ada/game-core';
+import { DEV_DECK_SIZE, viewFor, BASE_COSTS, DEMOLISH_COSTS, DEV_CARD_COST, DEV_DECK_COMPOSITION, DEV_CARD_KINDS, RESOURCES, ROLE_LIST } from '@ada/game-core';
 import { I18nProvider } from '../src/i18n/context';
 import { dictionaries, translate } from '../src/i18n';
 import { createStorage, forgetIdentity } from '../src/net/storage';
+import { DeckInfoButton, DeckInfoSheet } from '../src/ui/DeckInfo';
 import { HeaderButtons } from '../src/ui/HeaderButtons';
 import { CostsSheet } from '../src/screens/sheets/InfoSheets';
 import { RulesSheet } from '../src/screens/sheets/RulesSheet';
@@ -131,5 +132,20 @@ describe('forgetting the identity', () => {
     expect(store.get('token')).toBeNull();
     expect(store.get('name')).toBeNull();
     expect(store.get('locale')).toBe('tr');
+  });
+});
+
+describe('the development deck info', () => {
+  it('tells the mix of the whole deck and how many are left, and nothing about what comes next', () => {
+    const text = strip(render(<DeckInfoSheet left={17} onClose={() => undefined} />));
+    expect(text).toContain('25 cards: 14 Knight, 5 Victory point, 2 Road building, 2 Year of plenty, 2 Monopoly.');
+    expect(text).toContain(translate('en', 'dev.deck', { n: 17 }));
+    expect(DEV_DECK_SIZE).toBe(25);
+  });
+  it('is one button beside the buy button, closed until tapped', () => {
+    const html = render(<DeckInfoButton left={25} />);
+    expect(html).toContain('data-action="deck-info"');
+    expect(html).toContain(en['deck.info.open']);
+    expect(html).not.toContain('role="dialog"');
   });
 });

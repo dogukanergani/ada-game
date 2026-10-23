@@ -10,7 +10,7 @@ import { TokenBucket } from './rateLimit';
 import { cryptoRng } from './rng';
 import { lobbyViewFor } from './rooms/lobby';
 import { MemoryRoomStore } from './rooms/memoryStore';
-import { isActive, type Room } from './rooms/room';
+import { clockFor, isActive, type Room } from './rooms/room';
 import type { RoomStore } from './rooms/store';
 import { RoomService, type Out } from './service';
 import { createStaticHandler } from './static';
@@ -95,7 +95,7 @@ export function createAdaServer(opts: AdaServerOptions) {
   /** Each player gets their own view and the events as they may see them; nobody else's. */
   function pushGame(room: Room, events: GameEvent[], kind: 'game:update' | 'game:snapshot') {
     if (!room.game) return;
-    for (const { pid, sock } of connectedSockets(room)) sock.emit(kind, { view: viewFor(room.game, pid), events: eventsFor(events, pid), legal: legalMovesFor(room.game, pid) });
+    for (const { pid, sock } of connectedSockets(room)) sock.emit(kind, { view: viewFor(room.game, pid), events: eventsFor(events, pid), legal: legalMovesFor(room.game, pid), clock: clockFor(room, now()) });
   }
 
   function pushPresence(room: Room, notice: PresenceNotice, except: string) {
@@ -105,7 +105,7 @@ export function createAdaServer(opts: AdaServerOptions) {
   /** A player (re)attached: they get everything, the others learn about it. */
   function announceArrival(room: Room, pid: string) {
     const sock = sockets.get(pid);
-    if (sock && room.game) sock.emit('game:snapshot', { view: viewFor(room.game, pid), events: [], legal: legalMovesFor(room.game, pid) });
+    if (sock && room.game) sock.emit('game:snapshot', { view: viewFor(room.game, pid), events: [], legal: legalMovesFor(room.game, pid), clock: clockFor(room, now()) });
     pushLobby(room);
     if (room.phase !== 'lobby') pushPresence(room, { type: 'playerReconnected', player: pid }, pid);
   }

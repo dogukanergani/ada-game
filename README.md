@@ -16,6 +16,7 @@ A turn-based, room-code multiplayer island-building game for 2–5 players, insp
 - **Role system via hooks and role actions.** Passive abilities are hooks, active abilities are actions the role defines. The core never branches on a role name (a test enforces it), and the role list is data.
 - **Single-process deployment.** One Node process serves the Socket.IO game server and the built client on the same port.
 - **Entry screen, Settings and How to play.** A gear (language, "forget this device's identity") and a read-only rules sheet are reachable from the home screen, the lobby and the game; the rules take no game state, so they cannot change a game or show a rival's hand, and they stay off while the game forces a sheet open (discarding, choosing a victim).
+- **The game clock is the server's.** Each game payload carries the elapsed time worked out on the server (`clock`); the client only counts on from the moment it arrived, so a refresh or a wrong device clock cannot change it.
 - **Maps are data.** Three layouts (19, 30 and 14 tiles) are `MapDef` values, validated by `validateMap`; adding a map means adding data.
 
 ## Architecture

@@ -69,7 +69,7 @@ export function RulesSheet({ onClose, vpToWin }: { onClose: () => void; /** the 
 
       <section className="stack" aria-labelledby="rules-score" data-rules="score">
         <h3 id="rules-score">{t('rules.score.title')}</h3>
-        <p data-rules="win">
+        <p data-rules="win" className="rules-win">
           {vpToWin !== undefined ? t('rules.score.win', { vp: vpToWin }) : t('rules.score.winBoth', { standard: MODES.standard.vpToWin, short: MODES.short.vpToWin })}
         </p>
         <table className="cost-table">

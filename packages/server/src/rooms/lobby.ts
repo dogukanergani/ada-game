@@ -22,6 +22,8 @@ export function newRoom(code: string, hostId: string, name: string): Room {
     seats: [{ playerId: hostId, name, role: null, connected: true, away: false }],
     game: null,
     emptySince: null,
+    startedAt: null,
+    endedAt: null,
   };
 }
 
@@ -155,6 +157,8 @@ export function reset(room: Room, playerId: string): Done {
   if (room.phase !== 'finished') return fail('gameNotFinished');
   room.seats = room.seats.filter(isActive);
   room.game = null;
+  room.startedAt = null;
+  room.endedAt = null;
   room.phase = 'lobby';
   ensureHost(room);
   return OK;

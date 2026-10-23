@@ -137,7 +137,10 @@ export function assertNoLeak({ pid, event, payload, before, after, initialDeck }
     expect(raw, `${event} carries game data`).not.toMatch(/"(hand|devCards|hiddenPoints|devDeckCount)"/);
     return;
   }
-  expect(Object.keys(payload).sort()).toEqual(['events', 'legal', 'view']);
+  // the game clock is public (server time elapsed): exactly two fields, a number and a flag, and nothing else rides along
+  expect(Object.keys(payload).sort()).toEqual(['clock', 'events', 'legal', 'view']);
+  expect(Object.keys(payload.clock).sort()).toEqual(['elapsedMs', 'running']);
+  expect(Number.isFinite(payload.clock.elapsedMs) && payload.clock.elapsedMs >= 0 && typeof payload.clock.running === 'boolean').toBe(true);
   const view = payload.view;
   expect(view.me).toBe(pid);
   if (view.phase !== 'finished') {

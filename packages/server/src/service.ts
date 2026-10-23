@@ -120,7 +120,14 @@ export class RoomService {
   }
 
   start(playerId: string) {
-    return this.inRoom(playerId, (r) => startGame(r, playerId, this.rng, this.testVp, this.testResources));
+    return this.inRoom(playerId, (r) => {
+      const res = startGame(r, playerId, this.rng, this.testVp, this.testResources);
+      if (res.ok) {
+        r.startedAt = this.now();
+        r.endedAt = null;
+      }
+      return res;
+    });
   }
 
   reset(playerId: string) {
@@ -130,7 +137,11 @@ export class RoomService {
   act(playerId: string, action: Action): Out<{ code: string; events: GameEvent[] }> {
     const room = this.activeRoom(playerId);
     if (!room) return fail('notInRoom');
-    const res = this.mutate(room.code, (r) => playAction(r, playerId, action, this.rng));
+    const res = this.mutate(room.code, (r) => {
+      const done = playAction(r, playerId, action, this.rng);
+      if (done.ok && r.phase === 'finished' && r.endedAt === null) r.endedAt = this.now();
+      return done;
+    });
     return res.ok ? { ok: true, code: room.code, events: res.events } : res;
   }
 

@@ -104,3 +104,59 @@ for (const [size, viewport] of [['mobile', MOBILE], ['small', SMALL], ['desktop'
     await shot(page, '30-rules', size);
   });
 }
+
+test('in a game: the clock counts from the start and survives a refresh; the deck info lists the deck; the Soldier sees what demolishing costs', async ({ browser }) => {
+  const { seats } = await newTable(browser, ['Ada', 'Bora', 'Cem']);
+  const [host] = seats;
+  await host.page.getByRole('button', { name: /Asker/ }).click(); // the Soldier
+  await host.page.getByRole('button', { name: /Asker/ }).and(host.page.locator('[aria-pressed="true"]')).waitFor();
+  await startShort(seats);
+  await playSetup(seats);
+
+  // the clock: whole minutes since the start, in the top row; the same after a refresh (the server tells it)
+  const clock = host.page.locator('.game-top .game-clock');
+  await expect(clock).toHaveText(/^\d+ dk$/);
+  const minutes = Number(await clock.getAttribute('data-clock'));
+  expect(minutes).toBeLessThan(5);
+  await host.page.reload();
+  await host.page.locator('.game').waitFor();
+  const afterRefresh = Number(await host.page.locator('.game-top .game-clock').getAttribute('data-clock'));
+  expect(afterRefresh).toBeGreaterThanOrEqual(minutes);
+  expect(afterRefresh).toBeLessThan(5);
+  await shot(host.page, '32-game-top-clock', 'mobile');
+
+  // the deck info beside "Kart al"
+  await host.page.locator('[data-action="deck-info"]').first().click();
+  const deck = host.page.getByRole('dialog', { name: 'Gelişim destesi' });
+  await expect(deck.locator('[data-deck="contents"]')).toHaveText('25 kart: 14 Şövalye, 5 Zafer puanı, 2 Yol inşası, 2 Bolluk yılı, 2 Tekel.');
+  await expect(deck.locator('[data-deck="left"]')).toContainText('25');
+  await shot(host.page, '32-deck-info', 'mobile');
+  await host.page.keyboard.press('Escape');
+  await expect(deck).toHaveCount(0);
+
+  // the Soldier's demolition prices: in the Costs sheet and in the rules
+  await host.action('costs').click();
+  const costs = host.page.getByRole('dialog', { name: 'Maliyetler' });
+  for (const kind of ['road', 'settlement', 'city']) await expect(costs.locator(`[data-cost="demolish:${kind}"]`)).toBeVisible();
+  await expect(costs.locator('[data-cost="demolish:city"]')).toContainText('3 cevher');
+  await shot(host.page, '32-costs-soldier', 'mobile');
+  await host.page.keyboard.press('Escape');
+  await host.page.getByRole('button', { name: 'Nasıl oynanır?' }).click();
+  const rules = host.page.getByRole('dialog', { name: 'Nasıl oynanır?' });
+  await expect(rules.locator('[data-cost="demolish:settlement"]')).toHaveCount(1);
+  await expect(rules.locator('[data-rules="win"]')).toContainText('toplam 7 puana'); // short game: the real target
+  await rules.locator('[data-rules="score"]').scrollIntoViewIfNeeded();
+  await shot(host.page, '32-rules-score-in-game', 'mobile');
+
+  // another role sees no demolition rows in the Costs sheet
+  const other = seats[1];
+  await other.page.keyboard.press('Escape');
+  await other.action('costs').click();
+  await expect(other.page.getByRole('dialog', { name: 'Maliyetler' }).locator('[data-action-costs]')).toHaveCount(0);
+});
+
+test('the rules from the home screen tell both targets', async ({ browser }) => {
+  const { page } = await openPlayer(browser, MOBILE);
+  await page.getByRole('button', { name: 'Nasıl oynanır?' }).click();
+  await expect(page.locator('[data-rules="win"]')).toHaveText('Sırası gelen oyuncu toplam puanı standart modda 10, kısa modda 7 olduğunda oyunu kazanır.');
+});
