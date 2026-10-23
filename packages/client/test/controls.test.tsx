@@ -1,14 +1,16 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { RESOURCES, canAfford, type GameState } from '@ada/game-core';
-import { NO_MODE, capturePieces, controlsFor, missingFor } from '../src/game/controls';
-import { dictionaries } from '../src/i18n';
+import { NO_MODE, demolishPieces, controlsFor, missingFor } from '../src/game/controls';
+import { dictionaries, translate, type MessageKey } from '../src/i18n';
+import { describeError } from '../src/i18n/format';
+import type { GameError } from '@ada/protocol';
 import { I18nProvider } from '../src/i18n/context';
 import { DevCardsSheet } from '../src/screens/sheets/DevCardsSheet';
 import { DiscardSheet, StealSheet } from '../src/screens/sheets/InfoSheets';
 import { TradeSheet } from '../src/screens/sheets/TradeSheet';
 import { ActionDock } from '../src/ui/ActionDock';
-import { CapturePanel } from '../src/ui/CapturePanel';
+import { DemolishPanel, longestRoadLine, type PreviewState } from '../src/ui/DemolishPanel';
 import { HandBar } from '../src/ui/HandBar';
 import { Seats } from '../src/ui/Seats';
 import { reach } from './fixtures';
@@ -118,8 +120,8 @@ describe('controls: the main phase', () => {
     if (off) expect(html).toContain('action-sub');
   });
 
-  it('a role with no ability has no capture button, and the others do not see one out of turn', () => {
-    expect(controlsFor(view, legal).capture === null).toBe(view.players.find((p) => p.id === mover)!.role !== 'soldier');
+  it('a role with no ability has no demolish button, and the others do not see one out of turn', () => {
+    expect(controlsFor(view, legal).demolish === null).toBe(view.players.find((p) => p.id === mover)!.role !== 'soldier');
   });
 });
 
@@ -165,49 +167,98 @@ describe('controls: forced steps', () => {
   });
 });
 
-describe('capture', () => {
+describe('demolish', () => {
   const m = reach((s) => s.phase === 'main' && s.current === 'p0' && s.turn > 10 && Object.keys(s.buildings).length > 4);
   const { view, legal } = m.of('p0');
 
   it('only a role that has the ability sees the button', () => {
     // p0 is the soldier in these fixtures
     expect(view.players.find((p) => p.id === 'p0')!.role).toBe('soldier');
-    expect(controlsFor(view, legal).capture).not.toBeNull();
+    expect(controlsFor(view, legal).demolish).not.toBeNull();
     const other = m.of('p1');
-    expect(controlsFor(other.view, other.legal).capture).toBeNull();
+    expect(controlsFor(other.view, other.legal).demolish).toBeNull();
   });
 
-  it('lists every rival piece as a target, valid exactly where the server lists the capture as legal', () => {
-    const pieces = capturePieces(view, legal);
+  it('lists every rival piece as a target, valid exactly where the server lists the demolition as legal', () => {
+    const pieces = demolishPieces(view, legal);
     expect(pieces.length).toBe(Object.values(view.buildings).filter((b) => b.owner !== 'p0').length + Object.values(view.roads).filter((o) => o !== 'p0').length);
     const legalKeys = new Set(legal.roleActions.map((a) => (a.type === 'roleAction' ? `${a.params?.kind}:${a.params?.id}` : '')));
     for (const p of pieces) expect(p.valid, `${p.kind} ${p.id}`).toBe(legalKeys.has(`${p.kind}:${p.id}`));
     expect(pieces.every((p) => view.buildings[p.id]?.owner !== 'p0' || p.kind === 'road')).toBe(true);
   });
 
-  it('in capture mode the board offers those pieces and a tap becomes the role action', () => {
-    const c = controlsFor(view, legal, { kind: 'capture' });
+  it('in demolish mode the board offers those pieces and a tap becomes the role action', () => {
+    const c = controlsFor(view, legal, { kind: 'demolish' });
     expect(c.intent?.target.kind).toBe('piece');
-    expect(c.intent!.action({ kind: 'city', id: 9 })).toEqual({ type: 'roleAction', name: 'capture', params: { kind: 'city', id: 9 } });
+    expect(c.intent!.action({ kind: 'city', id: 9 })).toEqual({ type: 'roleAction', name: 'demolish', params: { kind: 'city', id: 9 } });
     expect(c.intent!.action({ kind: 'vertex', id: 9 })).toBeNull();
   });
 
-  it('the panel shows the server\'s cost and point changes, or its reason', () => {
-    const base = { view, picked: { kind: 'city' as const, id: 1 }, anyTargets: true };
-    const ok = render(
-      <CapturePanel
-        {...base}
-        state={{ status: 'ok', preview: { restricted: false, cost: { lumber: 0, brick: 0, wool: 3, grain: 3, ore: 5 }, points: { p0: { before: 2, after: 4 }, p1: { before: 3, after: 1 } }, events: [] } }}
-      />,
+  const rivalOwner = Object.values(view.buildings).find((b) => b.owner !== 'p0')!.owner;
+  const ok = (over: Partial<Extract<PreviewState, { status: 'ok' }>['preview']> = {}) => ({
+    status: 'ok' as const,
+    preview: { restricted: false, cost: { lumber: 0, brick: 0, wool: 2, grain: 2, ore: 3 }, points: { p0: { before: 2, after: 2 }, [rivalOwner]: { before: 3, after: 2 } }, events: [], ...over },
+  });
+  const rivalPiece = Object.entries(view.buildings).find(([, b]) => b.owner !== 'p0')!;
+  const base = { view, picked: { kind: rivalPiece[1].kind, id: Number(rivalPiece[0]) }, anyTargets: true };
+  const rivalName = view.players.find((p) => p.id === rivalPiece[1].owner)!.name;
+
+  it('the panel says what happens and what it costs in one sentence, with the points that change', () => {
+    const html = render(<DemolishPanel {...base} state={ok()} />);
+    const effect = en[`demolish.effect.${rivalPiece[1].kind}` as const].replace('{player}', rivalName);
+    expect(html).toContain(effect.replace("'", '&#x27;'));
+    expect(html).toContain('2 wool, 2 grain, 3 ore');
+    expect(html).toContain(`${rivalName}: 3 → 2 points`);
+    // the Soldier's own points did not change, so they are not listed
+    expect(html).not.toContain('Player0: 2 → 2');
+  });
+
+  it('the panel tells how the longest road changes: who gets it, who loses it, who keeps a shorter one, and each road that got shorter', () => {
+    const name = (id: string) => ({ p0: 'Ada', p1: 'Bora' })[id] ?? id;
+    const t = (k: MessageKey, p?: Record<string, string | number>) => translate('en', k, p);
+    const lr = (before: [string | null, number], after: [string | null, number]) => ({ before: { holder: before[0], length: before[1] }, after: { holder: after[0], length: after[1] } });
+    expect(longestRoadLine(t, name, lr(['p1', 6], ['p0', 5]))).toBe('The longest road moves from Bora to Ada (5 roads).');
+    expect(longestRoadLine(t, name, lr(['p1', 5], [null, 0]))).toBe('Bora loses the longest road, nobody holds it.');
+    expect(longestRoadLine(t, name, lr([null, 0], ['p0', 5]))).toBe('Ada takes the longest road (5 roads).');
+    expect(longestRoadLine(t, name, lr(['p1', 7], ['p1', 6]))).toBe('Bora keeps the longest road but it shrinks 7 → 6.');
+    expect(longestRoadLine(t, name, lr(['p1', 6], ['p1', 6]))).toBeNull();
+    expect(longestRoadLine(t, name, lr([null, 0], [null, 0]))).toBeNull();
+    const html = render(
+      <DemolishPanel {...base} picked={{ kind: 'road', id: Number(Object.keys(view.roads).find((r) => view.roads[Number(r)] !== 'p0') ?? 0) }} state={ok({ roadLengths: { p0: { before: 5, after: 5 }, p1: { before: 7, after: 4 } }, longestRoad: lr(['p1', 7], ['p0', 5]) })} />,
     );
-    expect(ok).toContain('3 grain');
-    expect(ok).toContain('5 ore');
-    expect(ok).toContain('Player0: 2 → 4 points');
-    expect(ok).toContain('Player1: 3 → 1 points');
-    const bad = render(<CapturePanel {...base} state={{ status: 'error', error: { key: 'game', error: { type: 'roleActionRefused', reason: 'protected' } } }} />);
-    expect(bad).toContain(en['error.roleActionRefused.protected']);
-    expect(render(<CapturePanel {...base} picked={null} state={{ status: 'idle' }} />)).toContain(en['capture.legendInvalid']);
-    expect(render(<CapturePanel {...base} picked={null} anyTargets={false} state={{ status: 'idle' }} />)).toContain(en['capture.noTargets']);
+    expect(html).toContain('longest road 7 → 4');
+    expect(html).not.toContain('Player0: longest road 5');
+    expect(html).toContain('The longest road moves from Player1 to Player0 (5 roads).');
+  });
+
+  it('the panel gives each refusal as its own sentence, with the player: protected, last building, no settlement piece left, no money, one a turn', () => {
+    const reasons: GameError[] = [
+      { type: 'roleActionRefused', reason: 'protected', player: 'p1', until: 9 },
+      { type: 'roleActionRefused', reason: 'lastBuilding', player: 'p1' },
+      { type: 'roleActionRefused', reason: 'settlementLimit', player: 'p1' },
+      { type: 'roleActionRefused', reason: 'perTurnLimit' },
+      { type: 'cannotAfford', cost: { lumber: 0, brick: 0, wool: 2, grain: 2, ore: 3 } },
+    ];
+    for (const lang of ['en', 'tr'] as const) {
+      const t = (k: MessageKey, p?: Record<string, string | number>) => translate(lang, k, p);
+      const texts = reasons.map((error) => render(<DemolishPanel {...base} state={{ status: 'error', error: { key: 'game', error } }} />));
+      const plain = reasons.map((error) => describeError(t, { key: 'game', error }, (id) => (id === 'p1' ? 'Bora' : id)));
+      expect(new Set(plain).size, `${lang}: the reasons read the same`).toBe(reasons.length);
+      // the player and the turn are in the sentences that are about them
+      expect(plain[0]).toContain('Bora');
+      expect(plain[0]).toContain('9');
+      expect(plain[1]).toContain('Bora');
+      expect(plain[2]).toContain('Bora');
+      expect(plain[4]).toContain('3');
+      for (const p of plain) expect(p, p).not.toMatch(/\{\w+\}/);
+      // no generic "cannot be done" in front of them: the panel (drawn in the test's language, English) shows the reason itself
+      if (lang === 'en') texts.forEach((html, i) => expect(html).toContain(plain[i].replace(/'/g, '&#x27;').replace(/Bora/g, view.players.find((p) => p.id === 'p1')?.name ?? 'Bora')));
+    }
+  });
+
+  it('the panel lists what can be chosen and what cannot, and says so when nothing can be', () => {
+    expect(render(<DemolishPanel {...base} picked={null} state={{ status: 'idle' }} />)).toContain(en['demolish.legendInvalid']);
+    expect(render(<DemolishPanel {...base} picked={null} anyTargets={false} state={{ status: 'idle' }} />)).toContain(en['demolish.noTargets']);
   });
 });
 

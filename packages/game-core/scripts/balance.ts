@@ -3,13 +3,14 @@
  * games (least-played roles are picked first), and the win rate is computed per
  * game played, overall and for each player count. Everyone at the table plays
  * the same kind of bot: `random` (legal moves at random) or `greedy` (builds
- * cities, settlements and cards, trades surplus, captures, robs the leader).
+ * cities, settlements and cards, trades surplus, demolishes with the Soldier, robs the leader).
  *
  *   npm run balance                       (random and greedy, 300 games per player count and mode)
  *   npm run balance -- --bot=greedy --games=300 --seed=7
  *   npm run balance -- --compact          (only the overall and per-player-count win rates)
  */
-import { MAX_STEPS, ROLE_IDS, measure, type CaptureStats, type MoveFn, type RoleTally } from '../sim/balance';
+import { DEMOLISH_COSTS, RESOURCES, type Hand } from '../src';
+import { MAX_STEPS, ROLE_IDS, gap, measure, type DemolitionStats, type MoveFn, type RoleTally } from '../sim/balance';
 import { moves as randomMoves } from '../sim/bot';
 import { greedyMoves } from '../sim/greedy';
 
@@ -41,16 +42,16 @@ function noise(t: RoleTally): number {
 }
 
 const ratio = (a: number, b: number) => (b ? a / b : NaN);
-function printCaptures(title: string, c: CaptureStats) {
+function printDemolitions(title: string, c: DemolitionStats) {
   const rate = (x: { played: number; won: number }) => (x.played ? `${pct(x.won / x.played)} of ${x.played}` : '-');
   console.log(`
 ${title}`);
   console.log(
-    `  captures per game: ${ratio(c.captures, c.games).toFixed(2)}   by the soldier per soldier game: ${ratio(c.soldierCaptures, c.soldierGames).toFixed(2)}
+    `  demolitions per game: ${ratio(c.demolitions, c.games).toFixed(2)}   by the soldier per soldier game: ${ratio(c.soldierDemolitions, c.soldierGames).toFixed(2)}
 ` +
-      `  soldier main-phase turns: ${c.soldierMainTurns}; a capture was affordable and legal in ${pct(ratio(c.soldierTurnsCaptureLegal, c.soldierMainTurns))} of them (a city or settlement target in ${pct(ratio(c.soldierTurnsBigTargetLegal, c.soldierMainTurns))}); ore in hand at those turns: ${ratio(c.soldierOreAtTurnStart, c.soldierMainTurns).toFixed(1)} on average
+      `  soldier main-phase turns: ${c.soldierMainTurns}; a demolition was affordable and legal in ${pct(ratio(c.soldierTurnsDemolishLegal, c.soldierMainTurns))} of them (a city or settlement target in ${pct(ratio(c.soldierTurnsBigTargetLegal, c.soldierMainTurns))}); ore in hand at those turns: ${ratio(c.soldierOreAtTurnStart, c.soldierMainTurns).toFixed(1)} on average
 ` +
-      `  soldier win rate in games where it captured: ${rate(c.captured)}; where it did not: ${rate(c.notCaptured)}`,
+      `  soldier win rate in games where it demolished: ${rate(c.demolished)}; where it did not: ${rate(c.notDemolished)}`,
   );
 }
 
@@ -69,9 +70,11 @@ function print(title: string, t: RoleTally) {
 console.log(
   `Balance report: ${GAMES} games per player count and mode, seed ${SEED}. Win rate = wins / games played. Expected = what equal skill would give (1 / player count).`,
 );
+const costText = (h: Hand) => RESOURCES.filter((r) => h[r] > 0).map((r) => `${h[r]} ${r}`).join(' + ');
+console.log(`Demolition costs (DEMOLISH_COSTS): road ${costText(DEMOLISH_COSTS.road)}; settlement ${costText(DEMOLISH_COSTS.settlement)}; city ${costText(DEMOLISH_COSTS.city)}.`);
 
 for (const botName of botNames) {
-  const { overall, byCount, byMode, unfinished, captureStats, allCaptureStats } = measure(BOTS[botName], GAMES, SEED);
+  const { overall, byCount, byMode, unfinished, demolitionStats, allDemolitionStats } = measure(BOTS[botName], GAMES, SEED);
   console.log(`\n=================== ${botName} bots ===================`);
   print('All games', overall);
   for (let n = 2; n <= 5; n++) print(n + ' players', byCount[n]);
@@ -79,8 +82,12 @@ for (const botName of botNames) {
     print('Standard mode', byMode.standard);
     print('Short mode', byMode.short);
   }
-  printCaptures('Soldier captures (all games)', allCaptureStats);
-  for (let n = 2; n <= 5; n++) printCaptures(`Soldier captures, ${n} players`, captureStats[n]);
+  printDemolitions('Soldier demolitions (all games)', allDemolitionStats);
+  for (let n = 2; n <= 5; n++) printDemolitions(`Soldier demolitions, ${n} players`, demolitionStats[n]);
+  console.log('\nSoldier win rate against the equal share (target: within +/-5 points of it):');
+  const line = (label: string, t: RoleTally) => `  ${label.padEnd(12)} ${pct(t.soldier.won / t.soldier.played).padStart(6)} won, equal share ${pct(t.soldier.expected / t.soldier.played).padStart(6)}, gap ${gap(t.soldier) >= 0 ? '+' : ''}${gap(t.soldier).toFixed(1)} points  (noise +/-${noise(t).toFixed(1)})  ${Math.abs(gap(t.soldier)) <= 5 ? 'within the target' : 'OUTSIDE the target'}`;
+  console.log(line('all games', overall));
+  for (let n = 2; n <= 5; n++) console.log(line(`${n} players`, byCount[n]));
   const per = [2, 3, 4, 5].map((n) => `${n}p +/-${noise(byCount[n]).toFixed(1)}`).join(', ');
   console.log(
     `\nEstimated noise (95%, percentage points): all games +/-${noise(overall).toFixed(1)}; by player count ${per}; by mode +/-${noise(byMode.standard).toFixed(1)}.`,

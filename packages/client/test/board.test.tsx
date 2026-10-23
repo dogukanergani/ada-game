@@ -117,7 +117,7 @@ describe('the board is drawn from the map data', () => {
 describe('highlights', () => {
   const { view, state } = game(3, 'standard');
 
-  it('marks tappable corners, edges, tiles and capture targets, and the selected one differently', () => {
+  it('marks tappable corners, edges, tiles and demolish targets, and the selected one differently', () => {
     const me = state.players[0].id;
     void me;
     const v = render(view, { kind: 'vertex', ids: [1, 2, 3] });

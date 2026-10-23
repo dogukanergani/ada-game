@@ -76,7 +76,7 @@ export function createGame(config: GameConfig, rng: Rng): CreateResult {
     offers: [],
     nextOfferId: 1,
     turnFlags: { devPlayed: false, counters: {} },
-    protectedUntil: { roads: {}, buildings: {} },
+    demolishShield: {},
     longestRoad: { holder: null, length: 0 },
     largestArmy: { holder: null, size: 0 },
     winner: null,

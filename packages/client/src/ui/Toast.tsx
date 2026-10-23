@@ -22,7 +22,7 @@ export function Toast() {
     state.game?.view.players.find((p) => p.id === id)?.name ?? state.lobby?.players.find((p) => p.id === id)?.name ?? '?';
   const text =
     n.kind === 'error'
-      ? describeError(t, n.error)
+      ? describeError(t, n.error, nameOf)
       : t(n.notice.type === 'playerDisconnected' ? 'presence.playerDisconnected' : 'presence.playerReconnected', { player: nameOf(n.notice.player) });
 
   return (

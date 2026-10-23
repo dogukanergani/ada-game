@@ -1381,11 +1381,11 @@ legend {
 .swatch.invalid {
   border-top-color: #8b99a0;
 }
-.capture p,
-.capture .points-delta {
+.demolish p,
+.demolish .points-delta {
   margin: 0;
 }
-.capture .legend {
+.demolish .legend {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 12px;

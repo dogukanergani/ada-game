@@ -2,13 +2,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  RESOURCES, ROLE_LIST, applyAction, bankRatioFor, createGame, legalRoleActions, longestRoadFor, publicPoints, topologyOf, validate,
+  DEMOLISHES_PER_TURN, DEMOLISH_COSTS, RESOURCES, ROLE_LIST, applyAction, bankRatioFor, countPieces, createGame, legalRoleActions, longestRoadFor, publicPoints, topologyOf, validate,
   type Action, type GameState,
 } from '../src';
-import { act, dice, findPath, give, hand, mainPhase, mulberry32, putBuilding, putRoad, scripted, setTile } from './helpers';
+import { act, dice, findPath, give, hand, mainPhase, mulberry32, putBuilding, putRoad, scripted, setTile, vertexAwayFrom } from './helpers';
 
 const sum = (s: GameState, r: (typeof RESOURCES)[number]) => s.bank[r] + s.players.reduce((a, p) => a + p.hand[r], 0);
-const capture = (kind: string, id: number): Action => ({ type: 'roleAction', name: 'capture', params: { kind, id } });
+const demolish = (kind: string, id: number): Action => ({ type: 'roleAction', name: 'demolish', params: { kind, id } });
 
 describe('role registry', () => {
   it('has five roles; the list is data and the core knows no role by name', () => {
@@ -35,7 +35,7 @@ describe('role registry', () => {
 
   it('a role action of another role is unknown', () => {
     const s = mainPhase(2, { roles: ['sage', 'soldier'] });
-    expect(validate(s, 'p0', capture('road', 0))).toMatchObject({ type: 'unknownRoleAction' });
+    expect(validate(s, 'p0', demolish('road', 0))).toMatchObject({ type: 'unknownRoleAction' });
     expect(validate(s, 'p0', { type: 'roleAction', name: 'toString' })).toMatchObject({ type: 'unknownRoleAction' });
     expect(legalRoleActions(s, 'p0')).toEqual([]);
   });
@@ -226,8 +226,8 @@ describe('harvester: a bank card when the roll gives nothing', () => {
   });
 });
 
-describe('soldier: capture', () => {
-  function war(opts: { cityLimit?: boolean } = {}) {
+describe('soldier: demolish', () => {
+  function war() {
     const s = mainPhase(3, { roles: ['soldier', 'sage', 'sailor'] });
     s.vpToWin = 99;
     const topo = topologyOf(s.map);
@@ -245,131 +245,268 @@ describe('soldier: capture', () => {
     give(s, 'p0', hand({ ore: 5, wool: 3, grain: 3 }));
     return { s, spread, road, topo };
   }
+  const piecesOf = (s: GameState, pid: string) => countPieces(s, pid);
+
+  it('the costs are one table with the three prices, and nothing else in the rules names a price', () => {
+    expect(DEMOLISH_COSTS).toEqual({
+      road: hand({ ore: 1, wool: 1 }),
+      settlement: hand({ ore: 2, wool: 1, grain: 1 }),
+      city: hand({ ore: 3, wool: 2, grain: 2 }),
+    });
+    expect(DEMOLISHES_PER_TURN).toBe(1);
+  });
 
   it('lists exactly what it accepts', () => {
     const { s } = war();
     const acts = legalRoleActions(s, 'p0');
     expect(acts.length).toBeGreaterThan(0);
     for (const a of acts) expect(validate(s, 'p0', a)).toBeNull();
-    // 5 ore, 3 wool, 3 grain: everything is affordable once; without resources the list shrinks
+    // 5 ore, 3 wool, 3 grain: everything is affordable; without enough, the list shrinks to what can be paid
     const poor = structuredClone(s);
-    poor.players[0].hand = hand({ ore: 2, wool: 2 });
+    poor.players[0].hand = hand({ ore: 1, wool: 1 });
     const lessActs = legalRoleActions(poor, 'p0');
+    expect(lessActs.length).toBeGreaterThan(0);
     expect(lessActs.every((a) => a.type === 'roleAction' && (a.params as { kind: string }).kind === 'road')).toBe(true);
     expect(legalRoleActions(poor, 'p0', { ignoreCost: true }).length).toBe(acts.length);
   });
 
-  it('captures a road for 2 ore + 2 wool and the road changes owner', () => {
+  it('demolishes a road for 1 ore + 1 wool: the road is gone, goes back to its owner\'s stock, the payment goes to the bank', () => {
     let { s, road } = war();
-    s = act(s, 'p0', capture('road', road));
-    expect(s.roads[road]).toBe('p0');
-    expect(s.players[0].hand).toEqual(hand({ ore: 3, wool: 1, grain: 3 }));
+    const before = piecesOf(s, 'p1');
+    s = act(s, 'p0', demolish('road', road));
+    expect(s.roads[road]).toBeUndefined();
+    expect(piecesOf(s, 'p1').road).toBe(before.road - 1);
+    expect(s.players[0].hand).toEqual(hand({ ore: 4, wool: 2, grain: 3 }));
     for (const r of RESOURCES) expect(sum(s, r)).toBe(19);
   });
 
-  it('captures a settlement (3 ore, 2 wool, 2 grain): 1 point moves', () => {
+  it('demolishes a settlement (2 ore, 1 wool, 1 grain): it is gone, its owner loses 1 point, the Soldier gains nothing', () => {
     let { s, spread } = war();
-    s = act(s, 'p0', capture('settlement', spread[0]));
-    expect(s.buildings[spread[0]]).toEqual({ owner: 'p0', kind: 'settlement' });
-    expect(s.players[0].hand).toEqual(hand({ ore: 2, wool: 1, grain: 1 }));
-    expect(publicPoints(s, 'p0')).toBe(1);
+    const points = publicPoints(s, 'p0');
+    s = act(s, 'p0', demolish('settlement', spread[0]));
+    expect(s.buildings[spread[0]]).toBeUndefined();
+    expect(s.players[0].hand).toEqual(hand({ ore: 3, wool: 2, grain: 2 }));
     expect(publicPoints(s, 'p1')).toBe(3);
+    expect(publicPoints(s, 'p0')).toBe(points);
+    expect(piecesOf(s, 'p1').settlement).toBe(1);
+    for (const r of RESOURCES) expect(sum(s, r)).toBe(19);
   });
 
-  it('captures a city (5 ore, 3 wool, 3 grain): 2 points move, it stays a city', () => {
+  it('demolishes a city (3 ore, 2 wool, 2 grain): it falls to a settlement, its owner loses 1 point, the city piece goes back to the stock', () => {
     let { s, spread } = war();
-    s = act(s, 'p0', capture('city', spread[2]));
-    expect(s.buildings[spread[2]]).toEqual({ owner: 'p0', kind: 'city' });
-    expect(s.players[0].hand).toEqual(hand());
-    expect(publicPoints(s, 'p0')).toBe(2);
+    s = act(s, 'p0', demolish('city', spread[2]));
+    expect(s.buildings[spread[2]]).toEqual({ owner: 'p1', kind: 'settlement' });
+    expect(s.players[0].hand).toEqual(hand({ ore: 2, wool: 1, grain: 1 }));
+    expect(publicPoints(s, 'p1')).toBe(3);
+    expect(piecesOf(s, 'p1')).toMatchObject({ settlement: 3, city: 0 });
+    expect(publicPoints(s, 'p0')).toBe(0);
   });
 
-  it('one capture per turn; the allowance returns next turn', () => {
+  it('says what happened as an event: who, whom, what, where, and the price (public data only)', () => {
+    const { s, spread } = war();
+    const r = applyAction(s, 'p0', demolish('city', spread[2]), mulberry32(3));
+    if (!r.ok) throw new Error('refused');
+    expect(r.events).toContainEqual({ type: 'demolished', player: 'p0', from: 'p1', kind: 'city', id: spread[2], cost: DEMOLISH_COSTS.city });
+  });
+
+  it('the place is free afterwards: another player who is connected there may build on it, and nobody could before', () => {
+    let { s, spread, topo } = war();
+    // p2 has a road to that corner (a second edge of it, besides p1's)
+    const toCorner = topo.vertices[spread[0]].edges.find((e) => s.roads[e] === undefined)!;
+    putRoad(s, toCorner, 'p2');
+    s.players[0].hand = hand();
+    give(s, 'p0', hand({ ore: 2, wool: 1, grain: 1 }));
+    give(s, 'p2', hand({ lumber: 1, brick: 1, wool: 1, grain: 1 }));
+    const build: Action = { type: 'placeSettlement', vertex: spread[0] };
+    s.current = 'p2';
+    expect(validate(s, 'p2', build)).toMatchObject({ type: 'occupied' });
+    s.current = 'p0';
+    s = act(s, 'p0', demolish('settlement', spread[0]));
+    s.current = 'p2';
+    expect(validate(s, 'p2', build)).toBeNull();
+    s = act(s, 'p2', build);
+    expect(s.buildings[spread[0]]).toEqual({ owner: 'p2', kind: 'settlement' });
+  });
+
+  it('one demolition per turn; the allowance returns next turn', () => {
     let { s, spread, road } = war();
     s.players[0].hand = hand();
     give(s, 'p0', hand({ ore: 10, wool: 6, grain: 6 }));
-    s = act(s, 'p0', capture('road', road));
-    expect(validate(s, 'p0', capture('settlement', spread[0]))).toMatchObject({ type: 'roleActionRefused', reason: 'perTurnLimit' });
+    s = act(s, 'p0', demolish('road', road));
+    expect(validate(s, 'p0', demolish('settlement', spread[0]))).toMatchObject({ type: 'roleActionRefused', reason: 'perTurnLimit' });
     expect(legalRoleActions(s, 'p0')).toEqual([]);
     s = act(s, 'p0', { type: 'endTurn' });
     expect(s.turnFlags.counters).toEqual({});
   });
 
-  it('needs the main phase, the right target and the money', () => {
+  it('needs the main phase, a rival\'s piece of that kind, and the money', () => {
     const { s, spread, road } = war();
     const roll = structuredClone(s);
     roll.phase = 'roll';
-    expect(validate(roll, 'p0', capture('road', road))).toMatchObject({ type: 'wrongPhase' });
-    expect(validate(s, 'p1', capture('road', road))).toMatchObject({ type: 'unknownRoleAction' });
-    expect(validate(s, 'p0', capture('settlement', spread[2]))).toMatchObject({ type: 'invalidTarget' }); // that is a city
-    expect(validate(s, 'p0', capture('road', 9999))).toMatchObject({ type: 'invalidTarget' });
-    expect(validate(s, 'p0', capture('castle', 0))).toMatchObject({ type: 'invalidTarget' });
-    expect(validate(s, 'p0', { type: 'roleAction', name: 'capture', params: { kind: 'road' } })).toMatchObject({ type: 'invalidTarget' });
+    expect(validate(roll, 'p0', demolish('road', road))).toMatchObject({ type: 'wrongPhase' });
+    expect(validate(s, 'p1', demolish('road', road))).toMatchObject({ type: 'unknownRoleAction' });
+    expect(validate(s, 'p0', demolish('settlement', spread[2]))).toMatchObject({ type: 'invalidTarget' }); // that is a city
+    expect(validate(s, 'p0', demolish('road', 9999))).toMatchObject({ type: 'invalidTarget' });
+    expect(validate(s, 'p0', demolish('castle', 0))).toMatchObject({ type: 'invalidTarget' });
+    expect(validate(s, 'p0', { type: 'roleAction', name: 'demolish', params: { kind: 'road' } })).toMatchObject({ type: 'invalidTarget' });
     const broke = structuredClone(s);
-    broke.players[0].hand = hand({ ore: 4, wool: 3, grain: 3 });
-    expect(validate(broke, 'p0', capture('city', spread[2]))).toMatchObject({ type: 'cannotAfford' });
-    // own pieces cannot be captured
+    broke.players[0].hand = hand({ ore: 2, wool: 2, grain: 2 });
+    expect(validate(broke, 'p0', demolish('city', spread[2]))).toMatchObject({ type: 'cannotAfford', cost: DEMOLISH_COSTS.city });
+    // an empty place and the Soldier's own pieces are not targets
+    expect(validate(s, 'p0', demolish('road', 41))).toMatchObject({ type: 'invalidTarget' });
     putRoad(s, 40, 'p0');
-    expect(validate(s, 'p0', capture('road', 40))).toMatchObject({ type: 'invalidTarget' });
+    expect(validate(s, 'p0', demolish('road', 40))).toMatchObject({ type: 'invalidTarget' });
   });
 
-  it('respects the soldier\'s own piece limits', () => {
+  it('the Soldier\'s own piece limits do not matter: nothing is built', () => {
     const { s, spread } = war();
-    const far = spread.slice(4); // independent of the four used by war()
-    expect(far.length).toBeGreaterThanOrEqual(5);
-    for (let i = 0; i < 5; i++) putBuilding(s, far[i], 'p0');
-    expect(validate(s, 'p0', capture('settlement', spread[0]))).toMatchObject({ type: 'pieceLimit', piece: 'settlement' });
-    expect(validate(s, 'p0', capture('city', spread[2]))).toBeNull();
-    for (let i = 0; i < 4; i++) { s.buildings[far[i]].kind = 'city'; }
-    expect(validate(s, 'p0', capture('city', spread[2]))).toMatchObject({ type: 'pieceLimit', piece: 'city' });
-    const roadsFull = war();
-    findPath(roadsFull.s, 15, 10).forEach((e) => { if (roadsFull.s.roads[e] === undefined) putRoad(roadsFull.s, e, 'p0'); });
-    const mine = Object.values(roadsFull.s.roads).filter((o) => o === 'p0').length;
-    if (mine >= 15) expect(validate(roadsFull.s, 'p0', capture('road', roadsFull.road))).toMatchObject({ type: 'pieceLimit', piece: 'road' });
+    const far = spread.slice(4);
+    for (let i = 0; i < 5 && i < far.length; i++) putBuilding(s, far[i], 'p0');
+    expect(validate(s, 'p0', demolish('settlement', spread[0]))).toBeNull();
+    expect(validate(s, 'p0', demolish('city', spread[2]))).toBeNull();
   });
 
-  it('a captured piece is protected for a full round', () => {
-    let { s, spread } = war();
-    s.players[0].hand = hand();
-    give(s, 'p0', hand({ ore: 10, wool: 6, grain: 6 }));
-    s = act(s, 'p0', capture('settlement', spread[0]));
-    expect(s.protectedUntil.buildings[spread[0]]).toBe(s.turn + 3);
-    s.current = 'p0';
-    s.turnFlags.counters = {};
-    // swap owner back to simulate a rival taking it, then try to capture it again within the round
-    s.buildings[spread[0]].owner = 'p1';
-    expect(validate(s, 'p0', capture('settlement', spread[0]))).toMatchObject({ type: 'roleActionRefused', reason: 'protected' });
-    s.turn += 3;
-    expect(validate(s, 'p0', capture('settlement', spread[0]))).toBeNull();
+  describe('the reasons for a refusal are told apart', () => {
+    it('protected: a player who was demolished in the last full round, with who and until when', () => {
+      let { s, spread, road } = war();
+      s.players[0].hand = hand();
+      give(s, 'p0', hand({ ore: 10, wool: 6, grain: 6 }));
+      s = act(s, 'p0', demolish('settlement', spread[0]));
+      expect(s.demolishShield).toEqual({ p1: s.turn + 3 });
+      s.current = 'p0';
+      s.turnFlags.counters = {};
+      // all of p1's pieces are shielded, not only the one that was hit; p2 is not
+      expect(validate(s, 'p0', demolish('road', road))).toMatchObject({ type: 'roleActionRefused', reason: 'protected', player: 'p1', until: s.turn + 3 });
+      expect(validate(s, 'p0', demolish('city', spread[2]))).toMatchObject({ reason: 'protected', player: 'p1' });
+      expect(validate(s, 'p0', demolish('settlement', spread[3]))).not.toMatchObject({ reason: 'protected' });
+      // a full round later (every player has played once) the Soldier may hit p1 again
+      s.turn += 3;
+      expect(validate(s, 'p0', demolish('road', road))).toBeNull();
+    });
+
+    it('lastBuilding: a player\'s last settlement or city, with who', () => {
+      const { s, spread } = war();
+      expect(validate(s, 'p0', demolish('settlement', spread[3]))).toMatchObject({ type: 'roleActionRefused', reason: 'lastBuilding', player: 'p2' });
+      // a lone city is just as protected; a player with two buildings may lose either
+      const lone = war();
+      delete lone.s.buildings[lone.spread[0]];
+      delete lone.s.buildings[lone.spread[1]];
+      expect(validate(lone.s, 'p0', demolish('city', lone.spread[2]))).toMatchObject({ reason: 'lastBuilding', player: 'p1' });
+      putBuilding(lone.s, lone.spread[0], 'p1');
+      expect(validate(lone.s, 'p0', demolish('city', lone.spread[2]))).toBeNull();
+      // roads are never "last": a player keeps no roads and is still in the game
+      expect(validate(s, 'p0', demolish('road', 40))).toMatchObject({ type: 'invalidTarget' });
+    });
+
+    it('settlementLimit: a city whose owner has no settlement piece left to fall to (a settlement of theirs can still be demolished)', () => {
+      const { s, spread } = war();
+      // p1 holds the most settlements the limit allows, besides the city
+      const extra = spread.slice(4, 9);
+      expect(extra.length).toBe(5);
+      delete s.buildings[spread[0]];
+      delete s.buildings[spread[1]];
+      for (const v of extra) putBuilding(s, v, 'p1');
+      expect(countPieces(s, 'p1')).toMatchObject({ settlement: 5, city: 1 });
+      expect(validate(s, 'p0', demolish('city', spread[2]))).toMatchObject({ type: 'roleActionRefused', reason: 'settlementLimit', player: 'p1' });
+      expect(validate(s, 'p0', demolish('settlement', extra[0]))).toBeNull();
+      // one fewer settlement and the city may fall
+      delete s.buildings[extra[0]];
+      expect(validate(s, 'p0', demolish('city', spread[2]))).toBeNull();
+    });
+
+    it('perTurnLimit and cannotAfford are their own errors, not the three above', () => {
+      const { s, spread } = war();
+      s.turnFlags.counters.demolish = 1;
+      expect(validate(s, 'p0', demolish('city', spread[2]))).toMatchObject({ reason: 'perTurnLimit' });
+      s.turnFlags.counters = {};
+      s.players[0].hand = hand();
+      expect(validate(s, 'p0', demolish('city', spread[2]))).toMatchObject({ type: 'cannotAfford' });
+    });
   });
 
-  it('never takes a player\'s last settlement or city', () => {
-    const { s, spread } = war();
-    expect(validate(s, 'p0', capture('settlement', spread[3]))).toMatchObject({ type: 'roleActionRefused', reason: 'lastBuilding' });
-  });
+  describe('the longest road is worked out again, then the win check runs', () => {
+    /** two roads of five, one for each of two players, that do not touch */
+    function twoRoads(s: GameState, a: string, b: string) {
+      const topo = topologyOf(s.map);
+      for (let from = 0; from < topo.vertices.length; from++) {
+        const pa = findPath(s, 5, from);
+        const verts = new Set(pa.flatMap((e) => [topo.edges[e].a, topo.edges[e].b]));
+        for (let other = 0; other < topo.vertices.length; other++) {
+          if (verts.has(other)) continue;
+          let pb: number[];
+          try {
+            pb = findPath(s, 5, other);
+          } catch {
+            continue;
+          }
+          const touches = pb.some((e) => verts.has(topo.edges[e].a) || verts.has(topo.edges[e].b) || pa.includes(e));
+          if (!touches) {
+            pa.forEach((e) => putRoad(s, e, a));
+            pb.forEach((e) => putRoad(s, e, b));
+            return { pa, pb };
+          }
+        }
+      }
+      throw new Error('no two separate roads');
+    }
 
-  it('recomputes the longest road when a road is captured', () => {
-    let s = mainPhase(2, { roles: ['soldier', 'sage'] });
-    s.vpToWin = 99;
-    const topo = topologyOf(s.map);
-    const path = findPath(s, 5);
-    path.forEach((e) => putRoad(s, e, 'p1'));
-    putBuilding(s, 40, 'p1');
-    putBuilding(s, 41, 'p1');
-    s.longestRoad = { holder: 'p1', length: 5 };
-    give(s, 'p0', hand({ ore: 2, wool: 2 }));
-    s = act(s, 'p0', capture('road', path[2]));
-    expect(longestRoadFor(s, 'p1')).toBeLessThan(5);
-    expect(s.longestRoad.holder).toBeNull();
-    expect(topo.edges.length).toBeGreaterThan(0);
-  });
+    it('cutting the holder\'s road leaves nobody with the longest road', () => {
+      let s = mainPhase(2, { roles: ['soldier', 'sage'] });
+      s.vpToWin = 99;
+      const path = findPath(s, 5);
+      path.forEach((e) => putRoad(s, e, 'p1'));
+      putBuilding(s, 40, 'p1');
+      putBuilding(s, 41, 'p1');
+      s.longestRoad = { holder: 'p1', length: 5 };
+      give(s, 'p0', hand({ ore: 1, wool: 1 }));
+      s = act(s, 'p0', demolish('road', path[2]));
+      expect(longestRoadFor(s, 'p1')).toBeLessThan(5);
+      expect(s.longestRoad).toEqual({ holder: null, length: 0 });
+      expect(publicPoints(s, 'p1')).toBe(2); // the two settlements; the 2 points of the road went
+    });
 
-  it('can win the game: points are checked after the capture', () => {
-    let { s, spread } = war();
-    s.vpToWin = 2;
-    s = act(s, 'p0', capture('city', spread[2]));
-    expect(s.phase).toBe('finished');
-    expect(s.winner).toBe('p0');
+    it('cutting it can hand the longest road to the Soldier, who may win with it', () => {
+      let s = mainPhase(2, { roles: ['soldier', 'sage'] });
+      s.vpToWin = 2;
+      const { pa, pb } = twoRoads(s, 'p0', 'p1');
+      putBuilding(s, 40, 'p1');
+      putBuilding(s, 41, 'p1');
+      s.longestRoad = { holder: 'p1', length: 5 };
+      give(s, 'p0', hand({ ore: 1, wool: 1 }));
+      expect(pa.length).toBe(5);
+      const r = applyAction(s, 'p0', demolish('road', pb[2]), mulberry32(2));
+      if (!r.ok) throw new Error(JSON.stringify(r.error));
+      expect(r.events).toContainEqual({ type: 'longestRoadChanged', holder: 'p0', length: 5 });
+      expect(r.state.longestRoad.holder).toBe('p0');
+      expect(r.state.phase).toBe('finished');
+      expect(r.state.winner).toBe('p0');
+    });
+
+    it('demolishing a building that cut a third player\'s road gives that player the longest road', () => {
+      let s = mainPhase(3, { roles: ['soldier', 'sage', 'sailor'] });
+      s.vpToWin = 99;
+      const topo = topologyOf(s.map);
+      const path = findPath(s, 5);
+      path.forEach((e) => putRoad(s, e, 'p2'));
+      // p1's settlement sits on the middle corner of p2's road, which cuts it in two
+      const between = [topo.edges[path[2]].a, topo.edges[path[2]].b].find((v) => topo.edges[path[3]].a === v || topo.edges[path[3]].b === v)!;
+      putBuilding(s, between, 'p1');
+      const far = vertexAwayFrom(s, [between]);
+      putBuilding(s, far, 'p1');
+      expect(longestRoadFor(s, 'p2')).toBeLessThan(5);
+      give(s, 'p0', hand({ ore: 2, wool: 1, grain: 1 }));
+      s = act(s, 'p0', demolish('settlement', between));
+      expect(longestRoadFor(s, 'p2')).toBe(5);
+      expect(s.longestRoad).toEqual({ holder: 'p2', length: 5 });
+    });
+
+    it('a demolition that only takes points from a rival never wins the game for the Soldier', () => {
+      let { s, spread } = war();
+      s.vpToWin = 1;
+      s = act(s, 'p0', demolish('city', spread[2]));
+      expect(s.phase).toBe('main');
+      expect(s.winner).toBeNull();
+    });
   });
 });
 

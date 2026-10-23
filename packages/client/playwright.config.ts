@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 const PLAY = 4300;
 const FINISH = 4301;
-const CAPTURE = 4302;
+const DEMOLISH = 4302;
 const OFFERS = 4303;
 const OFFERS_RES = 4304;
 
@@ -12,7 +12,7 @@ const OFFERS_RES = 4304;
  * test-only switches (a fixed seed for dice and decks, and a low target score).
  * Three servers: the usual one plays games at the real target score; the second
  * lowers the target to 3 points so a whole game ends within a minute; the third deals every
- * player six cards of each resource (ADA_TEST_RESOURCES=6) so the Soldier's capture can be played at once.
+ * player six cards of each resource (ADA_TEST_RESOURCES=6) so the Soldier's demolition can be played at once.
  * The seed belongs to the server, so every game on a server draws from one dice stream: a spec that opens many
  * games gets servers of its own (the fourth and fifth), or it would shift the dice of the specs that run after it.
  */
@@ -25,9 +25,9 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /finish\.spec|capture\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'play', testIgnore: /finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
-    { name: 'capture', testMatch: /capture\.spec/, use: { baseURL: `http://localhost:${CAPTURE}` } },
+    { name: 'demolish', testMatch: /demolish\.spec/, use: { baseURL: `http://localhost:${DEMOLISH}` } },
     { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec|seats\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },
     { name: 'offers-res', testMatch: /offer-visibility\.spec|edge-pick\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
   ],
@@ -51,10 +51,10 @@ export default defineConfig({
     {
       command: 'npm run start -w @ada/server',
       cwd: '../..',
-      url: `http://localhost:${CAPTURE}/`,
+      url: `http://localhost:${DEMOLISH}/`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { PORT: String(CAPTURE), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261022', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
+      env: { PORT: String(DEMOLISH), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261022', ADA_TEST_RESOURCES: '6', SERVER_SECRET: 'e2e-secret' },
     },
     {
       command: 'npm run start -w @ada/server',

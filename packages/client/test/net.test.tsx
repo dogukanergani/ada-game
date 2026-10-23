@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { GamePayload, LobbyView } from '@ada/protocol';
+import { PROTOCOL_VERSION, type GamePayload, type LobbyView } from '@ada/protocol';
 import { dictionaries } from '../src/i18n';
 import { I18nProvider } from '../src/i18n/context';
 import { Connection } from '../src/net/connection';
@@ -205,6 +205,18 @@ describe('Connection', () => {
     conn.start();
     expect(await until((m) => m.t === 'hello')).toMatchObject({ t: 'hello' });
     expect(await until((m) => m.t === 'conn' && m.status === 'online')).toBeTruthy();
+  });
+
+  it('the client of before the demolition (protocol 1) is told the app is out of date by this server (protocol 2), and stays out', async () => {
+    expect(PROTOCOL_VERSION).toBe(2);
+    const { conn, seen, until } = await boot(1);
+    conn.start();
+    expect(await until((m) => m.t === 'conn' && m.status === 'incompatible')).toBeTruthy();
+    expect(seen.some((m) => m.t === 'hello' || (m.t === 'conn' && m.status === 'online'))).toBe(false);
+    // the real client of today speaks 2: its own default is the protocol's version
+    const current = await boot();
+    current.conn.start();
+    expect(await current.until((m) => m.t === 'conn' && m.status === 'online')).toBeTruthy();
   });
 
   it('shows the "app is out of date" state, and stops, when the server refuses its version', async () => {

@@ -60,10 +60,10 @@ npm run start           # http://localhost:3001
 | Fuzz | 200 random-bot games (2–5 players, every role, both modes) plus 48 greedy-bot games, with every invariant checked at every step; validator and reducer must agree | `packages/game-core/test/fuzz.test.ts` |
 | Leak | `viewFor` and `eventFor` are unchanged by opponents' secrets; 200 seeded games over real WebSockets with every outgoing message inspected | `packages/game-core/test/view.test.ts`, `packages/server/test/leak-*.test.ts` |
 | Server integration | Rooms, lobby rules, reconnection, malformed input, rate limits, full bot games over sockets compared against `viewFor` | `packages/server/test` |
-| End to end | Playwright, two mobile contexts, seeded test servers: lobby, setup, dice, trade, a full short game, role capture, reconnection | `packages/client/e2e` |
+| End to end | Playwright, two mobile contexts, seeded test servers: lobby, setup, dice, trade, a full short game, the Soldier's demolition, reconnection | `packages/client/e2e` |
 | Balance report | Role win rates from random and greedy bots across player counts and modes (a report, not a pass/fail test) | `packages/game-core/scripts/balance.ts` |
 
-Current counts from `npm test`: **114** client + **155** game-core + **91** server = **360** unit/integration tests passing. `npm run e2e` runs **36** Playwright scenarios.
+Current counts from `npm test`: **143** client + **164** game-core + **96** server = **403** unit/integration tests passing. `npm run e2e` runs **101** Playwright scenarios.
 
 ```bash
 npm test             # all unit, fuzz, leak and server tests

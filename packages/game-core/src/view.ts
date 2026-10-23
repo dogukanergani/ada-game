@@ -57,7 +57,7 @@ export interface GameView {
   roadBuildingLeft: number;
   offers: TradeOffer[];
   turnFlags: { devPlayed: boolean; counters: Record<string, number> };
-  protectedUntil: { roads: Record<number, number>; buildings: Record<number, number> };
+  demolishShield: Record<string, number>;
   longestRoad: { holder: string | null; length: number };
   largestArmy: { holder: string | null; size: number };
   winner: string | null;
@@ -109,7 +109,7 @@ export function viewFor(state: GameState, playerId: string): GameView {
     roadBuildingLeft: state.roadBuildingLeft,
     offers: state.offers,
     turnFlags: state.turnFlags,
-    protectedUntil: state.protectedUntil,
+    demolishShield: state.demolishShield,
     longestRoad: state.longestRoad,
     largestArmy: state.largestArmy,
     winner: state.winner,

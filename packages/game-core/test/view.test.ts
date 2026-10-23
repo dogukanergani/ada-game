@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEV_CARD_KINDS, RESOURCES, applyAction, eventsFor, topologyOf, viewFor, type GameEvent, type GameState } from '../src';
-import { act, autoSetup, give, giveCard, hand, mainPhase, mulberry32, newGame, putBuilding, stackDeck } from './helpers';
+import { act, autoSetup, farVertices, give, giveCard, hand, mainPhase, mulberry32, newGame, putBuilding, stackDeck } from './helpers';
 
 const json = (v: unknown) => JSON.stringify(v);
 
@@ -221,5 +221,54 @@ describe('eventFor: event redaction', () => {
     if (!r.ok) throw new Error('refused');
     expect(json(eventsFor(r.events, 'p1'))).not.toContain('victoryPoint');
     expect(json(eventsFor(r.events, 'p0'))).toContain('victoryPoint');
+  });
+});
+
+describe('a demolition is public and hides nothing', () => {
+  function war() {
+    const s = mainPhase(3, { roles: ['soldier', 'sage', 'sailor'] });
+    s.vpToWin = 99;
+    const [a, b, c] = farVertices(s, 3);
+    putBuilding(s, a, 'p1');
+    putBuilding(s, b, 'p1', 'city');
+    putBuilding(s, c, 'p2');
+    give(s, 'p0', hand({ ore: 5, wool: 3, grain: 3 }));
+    // the demolished player holds secrets: cards of known kinds and development cards
+    give(s, 'p1', hand({ lumber: 2, ore: 3, grain: 1 }));
+    giveCard(s, 'p1', 'victoryPoint');
+    giveCard(s, 'p1', 'knight');
+    return { s, a, b };
+  }
+  const demolish = (kind: string, id: number) => ({ type: 'roleAction' as const, name: 'demolish', params: { kind, id } });
+
+  it('the event is the same for everybody, and says only who, whom, what, where and the price (no card, no hand)', () => {
+    const { s, a } = war();
+    const r = applyAction(s, 'p0', demolish('settlement', a), mulberry32(1));
+    if (!r.ok) throw new Error(JSON.stringify(r.error));
+    const e = r.events.find((x) => x.type === 'demolished')!;
+    expect(Object.keys(e).sort()).toEqual(['cost', 'from', 'id', 'kind', 'player', 'type']);
+    expect(e).toMatchObject({ player: 'p0', from: 'p1', kind: 'settlement', id: a });
+    const seen = ['p0', 'p1', 'p2'].map((pid) => json(eventsFor(r.events, pid)));
+    expect(new Set(seen).size).toBe(1);
+    // nothing in the events names a card the demolished player holds
+    expect(json(r.events)).not.toMatch(/victoryPoint|knight|devCards|"hand"/);
+  });
+
+  it('the shield is public, and neither it nor the event changes with the demolished player\'s secrets', () => {
+    const { s, a } = war();
+    const other = withOtherSecrets(s, 'p1');
+    const one = applyAction(s, 'p0', demolish('settlement', a), mulberry32(1));
+    const two = applyAction(other, 'p0', demolish('settlement', a), mulberry32(1));
+    if (!one.ok || !two.ok) throw new Error('refused');
+    expect(json(eventsFor(one.events, 'p2'))).toBe(json(eventsFor(two.events, 'p2')));
+    for (const pid of ['p0', 'p2']) {
+      const v1 = viewFor(one.state, pid);
+      const v2 = viewFor(two.state, pid);
+      expect(json(v1)).toBe(json(v2));
+      expect(v1.demolishShield).toEqual({ p1: s.turn + 3 });
+    }
+    // the demolished player's own view still has their secrets; the others' do not
+    expect(viewFor(one.state, 'p2').players.find((p) => p.id === 'p1')!.hand).toBeNull();
+    expect(viewFor(one.state, 'p1').players.find((p) => p.id === 'p1')!.hand).not.toBeNull();
   });
 });

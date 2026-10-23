@@ -15,7 +15,8 @@ export type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves
  * sends it with `identity:hello`; the server refuses a different version, and the
  * client then asks the player to reload the page.
  */
-export const PROTOCOL_VERSION = 1;
+/** 2: the Soldier demolishes instead of capturing (the `demolish` role action, the `demolished` event, `demolishShield` in the view) and the preview reports the longest road. */
+export const PROTOCOL_VERSION = 2;
 
 export const ROOM_CODE_LENGTH = 4;
 export const NAME_MAX_LENGTH = 24;
@@ -106,6 +107,12 @@ export interface PreviewResult {
   points?: Record<string, { before: number; after: number }>;
   /** only when not restricted: the events, censored for this player */
   events?: GameEvent[];
+  /**
+   * only when not restricted: who holds the longest road, and how long it is, before and after; and every player's own longest
+   * road before and after. All of it follows from the public board, so it hides nothing.
+   */
+  longestRoad?: { before: { holder: string | null; length: number }; after: { holder: string | null; length: number } };
+  roadLengths?: Record<string, { before: number; after: number }>;
 }
 
 export interface ClientToServerEvents {

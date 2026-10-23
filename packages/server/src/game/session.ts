@@ -1,5 +1,5 @@
 import {
-  RESOURCES, applyAction, createGame, dealTestHands, eventsFor, publicPoints, roleOf, validate,
+  RESOURCES, applyAction, createGame, dealTestHands, eventsFor, longestRoadFor, publicPoints, roleOf, validate,
   type Action, type GameEvent, type GameMode, type Hand, type Rng,
 } from '@ada/game-core';
 import type { PreviewResult } from '@ada/protocol';
@@ -79,5 +79,18 @@ export function previewAction(room: Room, playerId: string, action: Action): { o
 
   const points: Record<string, { before: number; after: number }> = {};
   for (const p of room.game.players) points[p.id] = { before: publicPoints(room.game, p.id), after: publicPoints(result.state, p.id) };
-  return { ok: true, preview: { restricted: false, cost, gain, points, events: eventsFor(result.events, playerId) } };
+  const roadLengths: Record<string, { before: number; after: number }> = {};
+  for (const p of room.game.players) roadLengths[p.id] = { before: longestRoadFor(room.game, p.id), after: longestRoadFor(result.state, p.id) };
+  return {
+    ok: true,
+    preview: {
+      restricted: false,
+      cost,
+      gain,
+      points,
+      events: eventsFor(result.events, playerId),
+      longestRoad: { before: { ...room.game.longestRoad }, after: { ...result.state.longestRoad } },
+      roadLengths,
+    },
+  };
 }

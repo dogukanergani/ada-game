@@ -95,13 +95,59 @@ function invariants(s: GameState) {
   must((s.phase === 'steal') === (s.stealFrom.length > 0), 'stealFrom vs phase');
   must((s.phase === 'roadBuilding') === (s.roadBuildingLeft > 0), 'roadBuildingLeft vs phase');
   must((['discard', 'robber', 'steal', 'roadBuilding'] as string[]).includes(s.phase) === (s.returnPhase !== null), 'returnPhase vs phase');
-  must((s.turnFlags.counters.capture ?? 0) <= 1, 'more than one capture in a turn');
+  must((s.turnFlags.counters.demolish ?? 0) <= 1, 'more than one demolition in a turn');
+  for (const [pid, until] of Object.entries(s.demolishShield)) must(ids.has(pid) && Number.isInteger(until), 'bad demolish shield');
   must(s.robber >= 0 && s.robber < s.tiles.length && s.tiles[s.robber] !== undefined, 'robber tile');
   must((s.phase === 'finished') === (s.winner !== null), 'winner vs phase');
   if (s.winner) must(totalPoints(s, s.winner) >= s.vpToWin, 'winner below the target');
   if (s.phase !== 'finished' && s.phase !== 'setup') {
     // nobody sits on the target during their own turn without having won
     must(totalPoints(s, s.current) < s.vpToWin, 'current player at the target but game not finished');
+  }
+}
+
+/**
+ * What a step may do to the pieces and the cards, checked on every step of every game: nobody who has a settlement or a city
+ * is ever left with none (only a demolition removes a building, and it spares the last one); and a demolition changes exactly
+ * what the rules say: it costs the Soldier its price (which goes to the bank) and nothing else of the Soldier's changes except
+ * the longest road it may open; a road or a settlement goes back to its owner's stock, a city falls to a settlement; the
+ * demolished player is shielded for a full round, and was not shielded already.
+ */
+function checkTransition(prev: GameState, next: GameState, events: GameEvent[], stats: Stats) {
+  for (const p of prev.players) {
+    const had = Object.values(prev.buildings).filter((b) => b.owner === p.id).length;
+    const has = Object.values(next.buildings).filter((b) => b.owner === p.id).length;
+    must(had === 0 || has > 0, `${p.id} was left with no settlement or city`);
+  }
+  const count = (s: GameState, pid: string) => {
+    const c = { road: 0, settlement: 0, city: 0 };
+    for (const o of Object.values(s.roads)) if (o === pid) c.road++;
+    for (const b of Object.values(s.buildings)) if (b.owner === pid) c[b.kind]++;
+    return c;
+  };
+  const buildingPoints = (s: GameState, pid: string) => Object.values(s.buildings).reduce((a, b) => a + (b.owner === pid ? (b.kind === 'city' ? 2 : 1) : 0), 0);
+  for (const e of events) {
+    if (e.type !== 'demolished') continue;
+    stats.demolished++;
+    const before = prev.players.find((p) => p.id === e.player)!;
+    const after = next.players.find((p) => p.id === e.player)!;
+    for (const r of RESOURCES) {
+      must(after.hand[r] === before.hand[r] - e.cost[r], 'the Soldier did not pay exactly the price');
+      must(next.bank[r] === prev.bank[r] + e.cost[r], 'the price did not go to the bank');
+    }
+    const mineBefore = count(prev, e.player);
+    const mineAfter = count(next, e.player);
+    must(JSON.stringify(mineBefore) === JSON.stringify(mineAfter), 'a demolition changed the Soldier\'s own pieces');
+    must(buildingPoints(next, e.player) === buildingPoints(prev, e.player), 'the Soldier gained building points from a demolition');
+    must(publicPoints(next, e.player) >= publicPoints(prev, e.player), 'the Soldier lost points by demolishing');
+    const was = count(prev, e.from);
+    const now = count(next, e.from);
+    if (e.kind === 'road') must(now.road === was.road - 1 && now.settlement === was.settlement && now.city === was.city, 'a demolished road');
+    else if (e.kind === 'settlement') must(now.settlement === was.settlement - 1 && now.road === was.road && now.city === was.city, 'a demolished settlement');
+    else must(now.city === was.city - 1 && now.settlement === was.settlement + 1 && now.road === was.road, 'a demolished city did not fall to a settlement');
+    if (e.kind !== 'road') must(buildingPoints(next, e.from) === buildingPoints(prev, e.from) - 1, 'a demolished building did not cost its owner exactly 1 point');
+    must((prev.demolishShield[e.from] ?? 0) <= prev.turn, 'a shielded player was demolished');
+    must(next.demolishShield[e.from] === prev.turn + prev.players.length, 'the demolished player was not shielded for a full round');
   }
 }
 
@@ -144,14 +190,14 @@ interface Stats {
   roleWins: Record<string, number>;
   rolePlays: Record<string, number>;
   stolen: number;
-  captured: number;
+  demolished: number;
   blocked: number;
   hits: number;
   robbed: number;
   refusedProbes: number;
 }
 
-const newStats = (): Stats => ({ games: 0, finished: 0, steps: 0, byType: {}, roleWins: {}, rolePlays: {}, stolen: 0, captured: 0, blocked: 0, hits: 0, robbed: 0, refusedProbes: 0 });
+const newStats = (): Stats => ({ games: 0, finished: 0, steps: 0, byType: {}, roleWins: {}, rolePlays: {}, stolen: 0, demolished: 0, blocked: 0, hits: 0, robbed: 0, refusedProbes: 0 });
 
 const BAD_PROBES: unknown[] = [
   { type: 'placeSettlement', vertex: -1 }, { type: 'placeRoad', edge: 99999 }, { type: 'bankTrade', give: 'gold', get: 'ore' },
@@ -185,14 +231,15 @@ function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxStep
     must(r.ok, `a validated move was refused: ${JSON.stringify(m.action)} ${JSON.stringify((r as { error?: unknown }).error)}`);
     if (checkPurity) must(JSON.stringify(s) === before, 'applyAction mutated its input');
     if (!r.ok) throw new Error('unreachable');
+    const prev = s;
     s = r.state;
+    checkTransition(prev, s, r.events, stats);
     stats.steps++;
     stats.byType[m.action.type] = (stats.byType[m.action.type] ?? 0) + 1;
     if (m.action.type === 'roleAction') stats.byType[`role:${m.action.name}`] = (stats.byType[`role:${m.action.name}`] ?? 0) + 1;
     checkRollTiles(s, r.events, stats);
     for (const e of r.events) {
       if (e.type === 'stolen') stats.stolen++;
-      if (e.type === 'captured') stats.captured++;
       if (e.type === 'productionBlocked') stats.blocked++;
     }
     invariants(s);
@@ -236,7 +283,7 @@ describe('random playouts', () => {
     // the bot must have exercised every kind of action, otherwise the run proves little
     for (const t of [
       'placeSettlement', 'placeRoad', 'upgradeCity', 'roll', 'discard', 'moveRobber', 'steal', 'bankTrade', 'offerTrade', 'acceptTrade',
-      'buyDevCard', 'playKnight', 'playRoadBuilding', 'playYearOfPlenty', 'playMonopoly', 'endTurn', 'role:capture',
+      'buyDevCard', 'playKnight', 'playRoadBuilding', 'playYearOfPlenty', 'playMonopoly', 'endTurn', 'role:demolish',
     ]) {
       if (!stats.byType[t]) throw new Error(`the bot never played ${t}`);
     }
@@ -244,20 +291,20 @@ describe('random playouts', () => {
     expect(stats.games).toBe(200);
     expect(stats.finished).toBeGreaterThan(stats.games * 0.5);
     expect(stats.stolen).toBeGreaterThan(0);
-    expect(stats.captured).toBeGreaterThan(0);
+    expect(stats.demolished).toBeGreaterThan(0);
     expect(stats.blocked).toBeGreaterThan(0);
     expect(stats.hits).toBeGreaterThan(0);
     expect(stats.robbed).toBeGreaterThan(0);
     if (process.env.FUZZ_REPORT) console.log(JSON.stringify(stats, null, 1));
   }, 120_000);
 
-  it('keeps every invariant when greedy bots play (they build, trade, capture and rob on purpose)', () => {
+  it('keeps every invariant when greedy bots play (they build, trade, demolish and rob on purpose)', () => {
     const stats = newStats();
     let seed = 5000;
     for (const mode of ['standard', 'short'] as GameMode[]) {
       for (let n = 2; n <= 5; n++) for (let g = 0; g < 6; g++) playGame(seed++, n, mode, stats, 6000, greedyMoves);
     }
-    expect(stats.captured).toBeGreaterThan(0);
+    expect(stats.demolished).toBeGreaterThan(0);
     expect(stats.games).toBe(48);
     expect(stats.finished).toBe(48);
     for (const t of ['upgradeCity', 'placeSettlement', 'buyDevCard', 'bankTrade', 'moveRobber', 'playKnight']) {

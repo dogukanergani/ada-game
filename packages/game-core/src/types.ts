@@ -96,8 +96,8 @@ export interface GameState {
   offers: TradeOffer[];
   nextOfferId: number;
   turnFlags: { devPlayed: boolean; counters: Record<string, number> };
-  /** captured pieces cannot be captured again before this `turn` value */
-  protectedUntil: { roads: Record<number, number>; buildings: Record<number, number> };
+  /** player id -> a player who has been demolished cannot be demolished again before this `turn` value (public) */
+  demolishShield: Record<string, number>;
   longestRoad: { holder: string | null; length: number };
   largestArmy: { holder: string | null; size: number };
   winner: string | null;

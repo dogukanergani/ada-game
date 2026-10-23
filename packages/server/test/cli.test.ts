@@ -33,7 +33,8 @@ describe('cli: command parsing', () => {
     expect(a('bank wool ore')).toEqual({ type: 'bankTrade', give: 'wool', get: 'ore' });
     expect(a('discard lumber=1,ore:2')).toEqual({ type: 'discard', resources: { lumber: 1, ore: 2 } });
     expect(a('offer give=wool:1 want=ore:2')).toEqual({ type: 'offerTrade', give: { wool: 1 }, want: { ore: 2 } });
-    expect(a('capture city 7')).toEqual({ type: 'roleAction', name: 'capture', params: { kind: 'city', id: 7 } });
+    expect(a('demolish city 7')).toEqual({ type: 'roleAction', name: 'demolish', params: { kind: 'city', id: 7 } });
+    expect(parseCommand('capture city 7')).toMatchObject({ kind: 'error' }); // the old name is gone
     expect(a('raw {"type":"roll"}')).toEqual({ type: 'roll' });
     expect(emitOf('steal bob').victimRef).toBe('bob');
     expect(emitOf('emit lobby:setMode {"mode":"short"}')).toMatchObject({ event: 'lobby:setMode', payload: { mode: 'short' } });

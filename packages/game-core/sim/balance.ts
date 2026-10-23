@@ -12,29 +12,29 @@ export const newTally = (): RoleTally => Object.fromEntries(ROLE_IDS.map((r) => 
 
 /** What happened in one game besides who won. */
 export interface GameFacts {
-  captures: Record<string, number>;
-  /** per player, in main-phase turns: turns played, turns where a capture was legal, and cards held at the start of those turns */
-  mainTurns: Record<string, { turns: number; captureLegal: number; cityOrSettlementTargetLegal: number; ore: number }>;
+  demolitions: Record<string, number>;
+  /** per player, in main-phase turns: turns played, turns where a demolition was legal, and cards held at the start of those turns */
+  mainTurns: Record<string, { turns: number; demolishLegal: number; cityOrSettlementTargetLegal: number; ore: number }>;
 }
 
-export interface CaptureStats {
+export interface DemolitionStats {
   games: number;
   /** games with a soldier at the table */
   soldierGames: number;
-  captures: number;
-  soldierCaptures: number;
+  demolitions: number;
+  soldierDemolitions: number;
   soldierMainTurns: number;
-  soldierTurnsCaptureLegal: number;
+  soldierTurnsDemolishLegal: number;
   soldierTurnsBigTargetLegal: number;
   soldierOreAtTurnStart: number;
-  /** soldier outcomes in games where the soldier captured at least once, and in games where it did not */
-  captured: { played: number; won: number };
-  notCaptured: { played: number; won: number };
+  /** soldier outcomes in games where the soldier demolished at least once, and in games where it did not */
+  demolished: { played: number; won: number };
+  notDemolished: { played: number; won: number };
 }
 
 export interface Measurement {
-  captureStats: Record<number, CaptureStats>;
-  allCaptureStats: CaptureStats;
+  demolitionStats: Record<number, DemolitionStats>;
+  allDemolitionStats: DemolitionStats;
   overall: RoleTally;
   byCount: Record<number, RoleTally>;
   byMode: Record<string, RoleTally>;
@@ -56,9 +56,9 @@ export function playOne(seed: number, chosen: string[], mode: GameMode, moves: M
       probedTurn = s.turn;
       const me = s.current;
       const caps = legalRoleActions(s, me);
-      const f = (facts.mainTurns[me] ??= { turns: 0, captureLegal: 0, cityOrSettlementTargetLegal: 0, ore: 0 });
+      const f = (facts.mainTurns[me] ??= { turns: 0, demolishLegal: 0, cityOrSettlementTargetLegal: 0, ore: 0 });
       f.turns++;
-      if (caps.length) f.captureLegal++;
+      if (caps.length) f.demolishLegal++;
       if (caps.some((a) => (a as { params?: { kind?: string } }).params?.kind !== 'road')) f.cityOrSettlementTargetLegal++;
       f.ore += s.players.find((x) => x.id === me)!.hand.ore;
     }
@@ -66,7 +66,7 @@ export function playOne(seed: number, chosen: string[], mode: GameMode, moves: M
     const r = applyAction(s, m.pid, m.action, rng);
     if (!r.ok) throw new Error(`bot move refused: ${JSON.stringify(m.action)} ${JSON.stringify(r.error)}`);
     s = r.state;
-    if (facts) for (const e of r.events) if (e.type === 'captured') facts.captures[e.player] = (facts.captures[e.player] ?? 0) + 1;
+    if (facts) for (const e of r.events) if (e.type === 'demolished') facts.demolitions[e.player] = (facts.demolitions[e.player] ?? 0) + 1;
     if (s.turn !== lastTurn) { lastTurn = s.turn; actions = 0; } else actions++;
   }
   return s;
@@ -83,13 +83,13 @@ export function measure(moves: MoveFn, games: number, seed0: number): Measuremen
   const byMode: Record<string, RoleTally> = { standard: newTally(), short: newTally() };
   let unfinished = 0;
   let seed = seed0 * 100003;
-  const newCap = (): CaptureStats => ({ games: 0, soldierGames: 0, captures: 0, soldierCaptures: 0, soldierMainTurns: 0, soldierTurnsCaptureLegal: 0, soldierTurnsBigTargetLegal: 0, soldierOreAtTurnStart: 0, captured: { played: 0, won: 0 }, notCaptured: { played: 0, won: 0 } });
-  const captureStats: Record<number, CaptureStats> = {};
-  const allCaptureStats = newCap();
+  const newDemo = (): DemolitionStats => ({ games: 0, soldierGames: 0, demolitions: 0, soldierDemolitions: 0, soldierMainTurns: 0, soldierTurnsDemolishLegal: 0, soldierTurnsBigTargetLegal: 0, soldierOreAtTurnStart: 0, demolished: { played: 0, won: 0 }, notDemolished: { played: 0, won: 0 } });
+  const demolitionStats: Record<number, DemolitionStats> = {};
+  const allDemolitionStats = newDemo();
 
   for (let n = 2; n <= 5; n++) {
     byCount[n] = newTally();
-    captureStats[n] = newCap();
+    demolitionStats[n] = newDemo();
     const plays = Object.fromEntries(ROLE_IDS.map((r) => [r, 0]));
     for (const mode of ['standard', 'short'] as GameMode[]) {
       const pickRng = mulberry32(seed++);
@@ -101,20 +101,20 @@ export function measure(moves: MoveFn, games: number, seed0: number): Measuremen
         const chosen = [...must];
         while (chosen.length < n) chosen.push(tied.splice(Math.floor(pickRng() * tied.length), 1)[0]);
         for (const r of chosen) plays[r]++;
-        const facts: GameFacts = { captures: {}, mainTurns: {} };
+        const facts: GameFacts = { demolitions: {}, mainTurns: {} };
         const s = playOne(seed++, chosen, mode, moves, facts);
         if (s.phase !== 'finished') { unfinished++; continue; }
-        for (const c of [captureStats[n], allCaptureStats]) {
+        for (const c of [demolitionStats[n], allDemolitionStats]) {
           c.games++;
-          c.captures += Object.values(facts.captures).reduce((a, b) => a + b, 0);
+          c.demolitions += Object.values(facts.demolitions).reduce((a, b) => a + b, 0);
           const sol = s.players.find((p) => p.role === 'soldier');
           if (sol) {
             c.soldierGames++;
-            const did = facts.captures[sol.id] ?? 0;
-            c.soldierCaptures += did;
+            const did = facts.demolitions[sol.id] ?? 0;
+            c.soldierDemolitions += did;
             const mt = facts.mainTurns[sol.id];
-            if (mt) { c.soldierMainTurns += mt.turns; c.soldierTurnsCaptureLegal += mt.captureLegal; c.soldierTurnsBigTargetLegal += mt.cityOrSettlementTargetLegal; c.soldierOreAtTurnStart += mt.ore; }
-            const bucket = did > 0 ? c.captured : c.notCaptured;
+            if (mt) { c.soldierMainTurns += mt.turns; c.soldierTurnsDemolishLegal += mt.demolishLegal; c.soldierTurnsBigTargetLegal += mt.cityOrSettlementTargetLegal; c.soldierOreAtTurnStart += mt.ore; }
+            const bucket = did > 0 ? c.demolished : c.notDemolished;
             bucket.played++;
             if (s.winner === sol.id) bucket.won++;
           }
@@ -129,7 +129,7 @@ export function measure(moves: MoveFn, games: number, seed0: number): Measuremen
       }
     }
   }
-  return { overall, byCount, byMode, unfinished, captureStats, allCaptureStats };
+  return { overall, byCount, byMode, unfinished, demolitionStats, allDemolitionStats };
 }
 
 export const rate = (t: Tally) => (t.played ? t.won / t.played : NaN);

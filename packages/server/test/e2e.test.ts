@@ -278,7 +278,7 @@ describe('malformed and abusive input', () => {
       { type: 'placeRoad' }, { type: 'placeRoad', edge: '3' }, { type: 'placeRoad', edge: -1 }, { type: 'placeRoad', edge: 1.5 },
       { type: 'bankTrade', give: 'gold', get: 'ore' }, { type: 'discard', resources: { ore: -1 } }, { type: 'discard', resources: { gold: 1 } },
       { type: 'discard', resources: [1] }, { type: 'steal', victim: 5 }, { type: 'nonsense' }, { type: 5 }, { type: 'roleAction' },
-      { type: 'roleAction', name: 'capture', params: 'x' }, { type: 'roleAction', name: 'x'.repeat(100) }, { type: 'acceptTrade', offerId: 'a' },
+      { type: 'roleAction', name: 'demolish', params: 'x' }, { type: 'roleAction', name: 'x'.repeat(100) }, { type: 'acceptTrade', offerId: 'a' },
     ];
     for (const a of bad) {
       const r = await players[0].emit('game:action', a);

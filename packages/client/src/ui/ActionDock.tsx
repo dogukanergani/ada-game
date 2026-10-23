@@ -19,7 +19,7 @@ interface Props {
   onSheet: (s: SheetName) => void;
   onConfirm: () => void;
   onCancel: () => void;
-  /** extra content for a special mode (the capture preview) */
+  /** extra content for a special mode (the demolish preview) */
   extra?: ReactNode;
   /** a way to reopen the final scores once the game is over */
   onScores?: () => void;
@@ -155,15 +155,15 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
         <button type="button" className="btn action" data-action="log" onClick={() => onSheet('log')}>
           {t('game.action.log')}
         </button>
-        {controls.capture && !placing && (
+        {controls.demolish && !placing && (
           <ActionButton
-            id="capture"
-            label={t('game.action.capture')}
-            control={controls.capture}
+            id="demolish"
+            label={t('game.action.demolish')}
+            control={controls.demolish}
             onBlocked={block}
             onClick={() => {
               setBlocked(null);
-              onMode({ kind: 'capture' });
+              onMode({ kind: 'demolish' });
             }}
           />
         )}

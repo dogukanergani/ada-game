@@ -22,7 +22,7 @@ Turn:    roll | end | settle <vertex> | city <vertex> | road <edge> | buy | bank
 Robber:  robber <tile> | steal <player> | discard lumber=1,ore=2
 Cards:   knight | roadbuilding | plenty <res> <res> | monopoly <res>
 Trade:   offer give=wool:1 want=ore:1 | accept <offerId> | cancel <offerId>
-Role:    capture <road|settlement|city> <id>
+Role:    demolish <road|settlement|city> <id>
 Other:   state | map | legal | autoplay [on|off] | whoami | raw <json action> | emit <event> <json> | help | quit
 Resources: ${RESOURCES.join(', ')}`;
 
@@ -135,11 +135,11 @@ export function parseCommand(line: string): Command | null {
       const w = want ? parseHand(want.slice(5)) : null;
       return g && w ? act({ type: 'offerTrade', give: g, want: w }) : err('usage: offer give=wool:1 want=ore:1');
     }
-    case 'capture': {
+    case 'demolish': {
       const n = num(rest[1]);
       return (a === 'road' || a === 'settlement' || a === 'city') && n !== null
-        ? act({ type: 'roleAction', name: 'capture', params: { kind: a, id: n } })
-        : err('usage: capture <road|settlement|city> <id>');
+        ? act({ type: 'roleAction', name: 'demolish', params: { kind: a, id: n } })
+        : err('usage: demolish <road|settlement|city> <id>');
     }
     case 'raw':
     case 'emit': {

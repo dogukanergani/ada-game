@@ -15,4 +15,5 @@ export * from './legal';
 export * from './reducer';
 export * from './roles/types';
 export * from './roles/registry';
+export { DEMOLISH_COSTS, DEMOLISHES_PER_TURN } from './roles/defs';
 export * from './view';

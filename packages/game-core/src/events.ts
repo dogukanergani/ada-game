@@ -34,7 +34,8 @@ export type GameEvent =
   | { type: 'roadBuildingEnded'; player: string; unused: number }
   | { type: 'longestRoadChanged'; holder: string | null; length: number }
   | { type: 'largestArmyChanged'; holder: string | null; size: number }
-  | { type: 'captured'; player: string; from: string; kind: PieceKind; id: number }
+  /** `kind` is what was demolished; a city is not removed but falls to a settlement. `cost` went to the bank. Public. */
+  | { type: 'demolished'; player: string; from: string; kind: PieceKind; id: number; cost: Hand }
   | { type: 'turnEnded'; player: string }
   | { type: 'turnStarted'; player: string; turn: number }
   | { type: 'gameWon'; player: string; points: number };
@@ -66,7 +67,7 @@ export const GAME_EVENT_TYPES = [
   'roadBuildingEnded',
   'longestRoadChanged',
   'largestArmyChanged',
-  'captured',
+  'demolished',
   'turnEnded',
   'turnStarted',
   'gameWon',

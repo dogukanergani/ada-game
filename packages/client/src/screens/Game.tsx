@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PieceKind } from '@ada/game-core';
 import { Board, type Pick } from '../board/Board';
-import { NO_MODE, capturePieces, controlsFor, type Mode } from '../game/controls';
+import { NO_MODE, demolishPieces, controlsFor, type Mode } from '../game/controls';
 import { defaultTab } from '../game/tradeView';
 import { titleFor, type Surface } from '../game/notices';
 import { heldBack, heldTotal, useReducedMotion, useRollPresentation, visibleLog } from '../game/roll';
@@ -9,7 +9,7 @@ import { useT } from '../i18n/context';
 import { useApp } from '../net/app';
 import { ActionDock, type SheetName } from '../ui/ActionDock';
 import { DiceTray } from '../ui/DiceTray';
-import { CapturePanel, type PreviewState } from '../ui/CapturePanel';
+import { DemolishPanel, type PreviewState } from '../ui/DemolishPanel';
 import { HandBar } from '../ui/HandBar';
 import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
 import { LogList } from '../ui/LogList';
@@ -71,17 +71,17 @@ export function GameScreen() {
     [api],
   );
 
-  /* ---- capture: ask the server what the tapped piece would do ---- */
+  /* ---- demolish: ask the server what the tapped piece would do ---- */
   const asked = useRef(0);
   useEffect(() => {
-    if (mode.kind !== 'capture' || !pick || !PIECES.includes(pick.kind)) {
+    if (mode.kind !== 'demolish' || !pick || !PIECES.includes(pick.kind)) {
       setPreview({ status: 'idle' });
       return;
     }
     const n = ++asked.current;
     setPreview({ status: 'loading' });
     void api
-      .ask('game:preview', { type: 'roleAction', name: 'capture', params: { kind: pick.kind, id: pick.id } })
+      .ask('game:preview', { type: 'roleAction', name: 'demolish', params: { kind: pick.kind, id: pick.id } })
       .then((r) => {
         if (n !== asked.current) return;
         setPreview(r.ok ? { status: 'ok', preview: r.preview as never } : { status: 'error', error: r.error });
@@ -95,7 +95,7 @@ export function GameScreen() {
     return t('board.piece', { piece: t(`piece.${p.kind as PieceKind}`), id: p.id });
   };
 
-  const confirmable = pick && (mode.kind !== 'capture' || preview.status === 'ok');
+  const confirmable = pick && (mode.kind !== 'demolish' || preview.status === 'ok');
   const confirm = async () => {
     if (!pick || !controls.intent) return;
     const action = controls.intent.action(pick);
@@ -180,12 +180,12 @@ export function GameScreen() {
           onCancel={cancel}
           onScores={() => setOverOpen(true)}
           extra={
-            mode.kind === 'capture' ? (
-              <CapturePanel
+            mode.kind === 'demolish' ? (
+              <DemolishPanel
                 view={view}
                 picked={pick && PIECES.includes(pick.kind) ? { kind: pick.kind as PieceKind, id: pick.id } : null}
                 state={preview}
-                anyTargets={capturePieces(view, legal).length > 0}
+                anyTargets={demolishPieces(view, legal).length > 0}
               />
             ) : null
           }

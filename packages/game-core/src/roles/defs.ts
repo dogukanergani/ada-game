@@ -1,5 +1,6 @@
 import { err } from '../events';
-import { canAfford, countPieces, getPlayer, isInt, payToBank, pieceLimitReached, topoOf } from '../state';
+import { PIECE_LIMITS } from '../constants';
+import { canAfford, countPieces, getPlayer, isInt, payToBank, topoOf } from '../state';
 import type { Hand, PieceKind, Resource } from '../types';
 import { RESOURCES } from '../types';
 import type { RoleActionDef, RoleDef } from './types';
@@ -9,19 +10,33 @@ import type { RoleActionDef, RoleDef } from './types';
  * rules never test for a role by name. Names and descriptions are translations.
  */
 
-/* ---------------- Soldier: capture ---------------- */
+/* ---------------- Soldier: demolish ---------------- */
 
-const CAPTURE_COSTS: Record<PieceKind, Hand> = {
-  road: { lumber: 0, brick: 0, wool: 2, grain: 0, ore: 2 },
-  settlement: { lumber: 0, brick: 0, wool: 2, grain: 2, ore: 3 },
-  city: { lumber: 0, brick: 0, wool: 3, grain: 3, ore: 5 },
+/**
+ * What demolishing a rival's piece costs the Soldier, and the only place these numbers live (the balance report
+ * changes nothing but this table). The payment goes to the bank; the Soldier gains no points and no cards.
+ */
+export const DEMOLISH_COSTS: Record<PieceKind, Hand> = {
+  road: { lumber: 0, brick: 0, wool: 1, grain: 0, ore: 1 },
+  settlement: { lumber: 0, brick: 0, wool: 1, grain: 1, ore: 2 },
+  city: { lumber: 0, brick: 0, wool: 2, grain: 2, ore: 3 },
 };
-const CAPTURES_PER_TURN = 1;
-const CAPTURE_COUNTER = 'capture';
+export const DEMOLISHES_PER_TURN = 1;
+const DEMOLISH_COUNTER = 'demolish';
 
 const isPiece = (x: unknown): x is PieceKind => x === 'road' || x === 'settlement' || x === 'city';
 
-const capture: RoleActionDef = {
+/**
+ * A rival's road, settlement or city is demolished. A road and a settlement go back to their owner's stock; a city falls
+ * to a settlement (its piece goes back to the stock). The place is empty (or a settlement again) for anyone the distance
+ * rule lets build there. Afterwards the longest road is worked out again for everyone and the win check runs, as after any
+ * change to the board (the core does both for every action).
+ *
+ * Refused, each with its own reason: a second demolition in one turn (`perTurnLimit`); a player who was demolished
+ * during the last full round (`protected`, with the player and the turn it lasts until); a player's last settlement or city
+ * (`lastBuilding`); a city whose owner has no settlement piece left to fall to (`settlementLimit`).
+ */
+const demolish: RoleActionDef = {
   check(s, pid, params, opts) {
     if (s.current !== pid) return err('notYourTurn');
     if (s.phase !== 'main') return err('wrongPhase', { phase: s.phase });
@@ -29,22 +44,20 @@ const capture: RoleActionDef = {
     if (!isPiece(kind)) return err('invalidTarget');
     const topo = topoOf(s);
     if (!isInt(id, kind === 'road' ? topo.edges.length : topo.vertices.length)) return err('invalidTarget');
-    if ((s.turnFlags.counters[CAPTURE_COUNTER] ?? 0) >= CAPTURES_PER_TURN) return err('roleActionRefused', { reason: 'perTurnLimit' });
+    if ((s.turnFlags.counters[DEMOLISH_COUNTER] ?? 0) >= DEMOLISHES_PER_TURN) return err('roleActionRefused', { reason: 'perTurnLimit' });
 
     let owner: string | undefined;
     if (kind === 'road') owner = s.roads[id];
     else if (s.buildings[id]?.kind === kind) owner = s.buildings[id].owner;
     if (owner === undefined || owner === pid) return err('invalidTarget');
 
-    const guarded = kind === 'road' ? s.protectedUntil.roads[id] : s.protectedUntil.buildings[id];
-    if (guarded !== undefined && s.turn < guarded) return err('roleActionRefused', { reason: 'protected', until: guarded });
-    if (kind !== 'road') {
-      const theirs = countPieces(s, owner);
-      if (theirs.settlement + theirs.city <= 1) return err('roleActionRefused', { reason: 'lastBuilding' });
-    }
-    if (pieceLimitReached(s, pid, kind)) return err('pieceLimit', { piece: kind });
-    if (!opts.ignoreCost && !canAfford(getPlayer(s, pid).hand, CAPTURE_COSTS[kind])) {
-      return err('cannotAfford', { cost: CAPTURE_COSTS[kind] });
+    const until = s.demolishShield[owner];
+    if (until !== undefined && s.turn < until) return err('roleActionRefused', { reason: 'protected', player: owner, until });
+    const theirs = countPieces(s, owner);
+    if (kind !== 'road' && theirs.settlement + theirs.city <= 1) return err('roleActionRefused', { reason: 'lastBuilding', player: owner });
+    if (kind === 'city' && theirs.settlement >= PIECE_LIMITS.settlement) return err('roleActionRefused', { reason: 'settlementLimit', player: owner });
+    if (!opts.ignoreCost && !canAfford(getPlayer(s, pid).hand, DEMOLISH_COSTS[kind])) {
+      return err('cannotAfford', { cost: DEMOLISH_COSTS[kind] });
     }
     return null;
   },
@@ -60,21 +73,21 @@ const capture: RoleActionDef = {
     const { s } = ctx;
     const kind = params.kind as PieceKind;
     const id = params.id as number;
-    payToBank(s, pid, CAPTURE_COSTS[kind]);
-    const until = s.turn + s.players.length;
+    const cost = DEMOLISH_COSTS[kind];
+    payToBank(s, pid, cost);
     let from: string;
     if (kind === 'road') {
       from = s.roads[id];
-      s.roads[id] = pid;
-      s.protectedUntil.roads[id] = until;
+      delete s.roads[id];
     } else {
       from = s.buildings[id].owner;
-      s.buildings[id].owner = pid;
-      s.protectedUntil.buildings[id] = until;
+      if (kind === 'city') s.buildings[id] = { owner: from, kind: 'settlement' };
+      else delete s.buildings[id];
     }
-    s.turnFlags.counters[CAPTURE_COUNTER] = (s.turnFlags.counters[CAPTURE_COUNTER] ?? 0) + 1;
+    s.demolishShield[from] = s.turn + s.players.length;
+    s.turnFlags.counters[DEMOLISH_COUNTER] = (s.turnFlags.counters[DEMOLISH_COUNTER] ?? 0) + 1;
     ctx.boardChanged = true;
-    ctx.events.push({ type: 'captured', player: pid, from, kind, id });
+    ctx.events.push({ type: 'demolished', player: pid, from, kind, id, cost: { ...cost } });
   },
 };
 
@@ -89,7 +102,7 @@ const HARVEST_HAND_LIMIT = 3;
 const TRADE_BONUS_COUNTER = 'tradeBonus';
 
 export const ROLE_DEFS: RoleDef[] = [
-  { id: 'soldier', actions: { capture } },
+  { id: 'soldier', actions: { demolish } },
   {
     id: 'sage',
     devCardCost: (base) => ({ ...base, wool: Math.max(0, base.wool - 1) }),

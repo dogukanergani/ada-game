@@ -12,7 +12,7 @@ import type { MessageKey } from '../i18n';
  */
 export type BuildKind = 'road' | 'settlement' | 'city';
 
-export type Mode = { kind: 'none' } | { kind: 'build'; piece: BuildKind } | { kind: 'capture' };
+export type Mode = { kind: 'none' } | { kind: 'build'; piece: BuildKind } | { kind: 'demolish' };
 export const NO_MODE: Mode = { kind: 'none' };
 
 export type Reason =
@@ -53,8 +53,8 @@ export interface GameControls {
   trade: Control;
   /** offers from other players that are open now (to mark the trade button) */
   openOffers: number;
-  /** null when this player's role has no capture ability */
-  capture: Control | null;
+  /** null when this player's role has no demolish ability */
+  demolish: Control | null;
   /** a sheet the game forces open: this player must discard, or choose whom to steal from */
   forced: 'discard' | 'steal' | null;
   intent: Intent | null;
@@ -116,7 +116,7 @@ export function controlsFor(view: GameView, legal: LegalMoves, mode: Mode = NO_M
   };
 
   const rolesActions = ROLES[me.role]?.actions ?? {};
-  const capture: Control | null = 'capture' in rolesActions ? (legal.roleActions.length > 0 ? on : off(gate() ?? { code: 'noSpot' })) : null;
+  const demolish: Control | null = 'demolish' in rolesActions ? (legal.roleActions.length > 0 ? on : off(gate() ?? { code: 'noSpot' })) : null;
 
   const forced: GameControls['forced'] = phase === 'discard' && legal.mustDiscard > 0 ? 'discard' : phase === 'steal' && myTurn && legal.stealVictims.length > 0 ? 'steal' : null;
 
@@ -139,11 +139,11 @@ export function controlsFor(view: GameView, legal: LegalMoves, mode: Mode = NO_M
     if (mode.piece === 'road') intent = { target: { kind: 'edge', ids: legal.roads }, action: (p) => (p.kind === 'edge' ? { type: 'placeRoad', edge: p.id } : null), hint: { key: 'game.hint.place' } };
     if (mode.piece === 'settlement') intent = { target: { kind: 'vertex', ids: legal.settlements }, action: (p) => (p.kind === 'vertex' ? { type: 'placeSettlement', vertex: p.id } : null), hint: { key: 'game.hint.place' } };
     if (mode.piece === 'city') intent = { target: { kind: 'vertex', ids: legal.cities }, action: (p) => (p.kind === 'vertex' ? { type: 'upgradeCity', vertex: p.id } : null), hint: { key: 'game.hint.place' } };
-  } else if (myTurn && phase === 'main' && mode.kind === 'capture' && capture) {
+  } else if (myTurn && phase === 'main' && mode.kind === 'demolish' && demolish) {
     intent = {
-      target: { kind: 'piece', pieces: capturePieces(view, legal) },
-      action: (p) => (p.kind === 'vertex' || p.kind === 'edge' || p.kind === 'tile' ? null : captureAction(p.kind, p.id)),
-      hint: { key: 'game.capture.hint' },
+      target: { kind: 'piece', pieces: demolishPieces(view, legal) },
+      action: (p) => (p.kind === 'vertex' || p.kind === 'edge' || p.kind === 'tile' ? null : demolishAction(p.kind, p.id)),
+      hint: { key: 'game.demolish.hint' },
     };
   }
 
@@ -173,21 +173,21 @@ export function controlsFor(view: GameView, legal: LegalMoves, mode: Mode = NO_M
     // anyone may open the trade sheet during the main phase: a rival's open offer is answered there
     openOffers: view.offers.filter((o) => o.from !== view.me).length,
     trade: phase === 'main' ? on : off({ code: 'phase', phase }),
-    capture,
+    demolish,
     forced,
     intent,
   };
 }
 
-/* ---------------- capture (a role action; the targets are the rivals' pieces) ---------------- */
+/* ---------------- demolish (a role action; the targets are the rivals' pieces) ---------------- */
 
-export const captureAction = (kind: PieceKind, id: number): Action => ({ type: 'roleAction', name: 'capture', params: { kind, id } });
+export const demolishAction = (kind: PieceKind, id: number): Action => ({ type: 'roleAction', name: 'demolish', params: { kind, id } });
 
-/** Every rival piece, marked valid when the server lists capturing it as legal right now. */
-export function capturePieces(view: GameView, legal: LegalMoves): { kind: PieceKind; id: number; valid: boolean }[] {
+/** Every rival piece, marked valid when the server lists demolishing it as legal right now. */
+export function demolishPieces(view: GameView, legal: LegalMoves): { kind: PieceKind; id: number; valid: boolean }[] {
   const valid = new Set(
     legal.roleActions
-      .filter((a): a is Extract<Action, { type: 'roleAction' }> => a.type === 'roleAction' && a.name === 'capture')
+      .filter((a): a is Extract<Action, { type: 'roleAction' }> => a.type === 'roleAction' && a.name === 'demolish')
       .map((a) => `${a.params?.kind}:${a.params?.id}`),
   );
   const out: { kind: PieceKind; id: number; valid: boolean }[] = [];

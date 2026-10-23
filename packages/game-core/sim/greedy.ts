@@ -1,5 +1,5 @@
 import {
-  RESOURCES, costFor, devCardCostFor, bankRatioFor, legalMovesFor, topologyOf,
+  RESOURCES, costFor, devCardCostFor, bankRatioFor, legalMovesFor, publicPoints, topologyOf,
   type Action, type Building, type GameState, type GameView, type Hand, type LegalMoves, type MapDef, type PieceKind, type Phase,
   type Resource, type Rng,
 } from '../src';
@@ -17,6 +17,10 @@ export interface BotSee {
   robber: number;
   map: MapDef;
   buildings: Record<number, Building>;
+  /** edge id -> owner (public) */
+  roads: Record<number, string>;
+  /** every player's public points */
+  points: Record<string, number>;
   hand: Hand;
   costs: Record<PieceKind | 'devCard', Hand>;
   bankRatios: Record<Resource, number>;
@@ -30,6 +34,8 @@ export function seeOfState(s: GameState, pid: string): BotSee {
     robber: s.robber,
     map: s.map,
     buildings: s.buildings,
+    roads: s.roads,
+    points: Object.fromEntries(s.players.map((p) => [p.id, publicPoints(s, p.id)])),
     hand: s.players.find((p) => p.id === pid)!.hand,
     costs: {
       road: costFor(s, pid, 'road'),
@@ -49,6 +55,8 @@ export function seeOfView(v: GameView): BotSee {
     robber: v.robber,
     map: v.map,
     buildings: v.buildings,
+    roads: v.roads,
+    points: Object.fromEntries(v.players.map((p) => [p.id, p.points])),
     hand: v.players.find((p) => p.id === v.me)!.hand!,
     costs: v.mine!.costs,
     bankRatios: v.mine!.bankRatios,
@@ -56,14 +64,15 @@ export function seeOfView(v: GameView): BotSee {
 }
 
 const canPay = (hand: Hand, cost: Hand) => RESOURCES.every((r) => hand[r] >= cost[r]);
-const CAPTURE_VALUE: Partial<Record<PieceKind, number>> = { city: 2, settlement: 1 };
+/** which kind of piece a demolishing bot prefers: the city that costs the most points, then a settlement, then a road */
+const DEMOLISH_RANK: Record<PieceKind, number> = { city: 2, settlement: 1, road: 0 };
 
 /**
  * The move this bot would make, or null when it has nothing in mind (callers
  * then fall back to `fallbackAction` or to random play). Order of ambition:
- * capture a city or settlement, build a city, a settlement, buy a card, build
- * a road that opens a settlement site, play a knight, trade surplus toward the
- * next goal.
+ * build a city, a settlement, demolish when the means are there (the leader's
+ * city first, then a settlement, then a road), buy a card, build a road that
+ * opens a settlement site, play a knight, trade surplus toward the next goal.
  */
 export function greedyAction(see: BotSee, legal: LegalMoves, rng: Rng): Action | null {
   if (see.current !== see.me) return null;
@@ -75,14 +84,10 @@ export function greedyAction(see: BotSee, legal: LegalMoves, rng: Rng): Action |
   if (see.phase === 'robber') return legal.robberTiles.length ? { type: 'moveRobber', tile: bestRobberTile(see, legal.robberTiles, rng) } : null;
   if (see.phase !== 'main') return null;
 
-  const captures = legal.roleActions
-    .map((a) => ({ a, value: CAPTURE_VALUE[(a as { params?: { kind?: PieceKind } }).params?.kind as PieceKind] ?? 0 }))
-    .filter((x) => x.value > 0)
-    .sort((x, y) => y.value - x.value);
-  if (captures.length) return captures[0].a;
-
   if (legal.cities.length) return { type: 'upgradeCity', vertex: pick(legal.cities, rng) };
   if (legal.settlements.length) return { type: 'placeSettlement', vertex: pick(legal.settlements, rng) };
+  const demolition = bestDemolition(see, legal);
+  if (demolition) return demolition;
   if (legal.canBuyDevCard) return { type: 'buyDevCard' };
   const openings = Object.entries(legal.roadOpenings);
   if (openings.length) {
@@ -93,6 +98,23 @@ export function greedyAction(see: BotSee, legal: LegalMoves, rng: Rng): Action |
   if (knight) return knight;
   const trade = surplusTrade(see, legal, rng);
   return trade ? { type: 'bankTrade', ...trade } : null;
+}
+
+/**
+ * The demolition a bot with the means would make: of the rivals it may demolish now (`legal` lists only the legal ones, already
+ * paid for), the one with the most public points; of that player's pieces, a city, else a settlement, else a road.
+ */
+export function bestDemolition(see: BotSee, legal: LegalMoves): Action | null {
+  const owner = (kind: PieceKind, id: number): string | undefined => (kind === 'road' ? see.roads[id] : see.buildings[id]?.owner);
+  const options = legal.roleActions
+    .map((a) => {
+      const p = (a as { params?: { kind?: PieceKind; id?: number } }).params;
+      return { a, kind: p?.kind as PieceKind, who: p?.kind && p.id !== undefined ? owner(p.kind, p.id) : undefined };
+    })
+    .filter((o): o is { a: Action; kind: PieceKind; who: string } => (o.a as { name?: string }).name === 'demolish' && o.who !== undefined && o.who !== see.me);
+  if (!options.length) return null;
+  options.sort((x, y) => (see.points[y.who] ?? 0) - (see.points[x.who] ?? 0) || DEMOLISH_RANK[y.kind] - DEMOLISH_RANK[x.kind]);
+  return options[0].a;
 }
 
 /** What to do when there is no plan: the forced steps (setup, discarding, stealing, free roads) at random, else end the turn. */

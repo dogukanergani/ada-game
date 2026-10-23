@@ -111,7 +111,11 @@ const samples: Record<GameEvent['type'], GameEvent[]> = {
   roadBuildingEnded: [{ type: 'roadBuildingEnded', player: 'a', unused: 1 }],
   longestRoadChanged: [{ type: 'longestRoadChanged', holder: 'a', length: 5 }, { type: 'longestRoadChanged', holder: null, length: 0 }],
   largestArmyChanged: [{ type: 'largestArmyChanged', holder: 'a', size: 3 }, { type: 'largestArmyChanged', holder: null, size: 0 }],
-  captured: [{ type: 'captured', player: 'a', from: 'b', kind: 'city', id: 3 }],
+  demolished: [
+    { type: 'demolished', player: 'a', from: 'b', kind: 'city', id: 3, cost: hand({ wool: 2, grain: 2, ore: 3 }) },
+    { type: 'demolished', player: 'a', from: 'b', kind: 'settlement', id: 3, cost: hand({ wool: 1, grain: 1, ore: 2 }) },
+    { type: 'demolished', player: 'a', from: 'b', kind: 'road', id: 3, cost: hand({ wool: 1, ore: 1 }) },
+  ],
   turnEnded: [{ type: 'turnEnded', player: 'a' }],
   turnStarted: [{ type: 'turnStarted', player: 'a', turn: 4 }],
   gameWon: [{ type: 'gameWon', player: 'a', points: 10 }],

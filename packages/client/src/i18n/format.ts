@@ -83,8 +83,8 @@ export function formatEvent(e: GameEvent, { t, name, me }: FormatContext): strin
       return e.holder ? t('event.longestRoadChanged.some', { holder: name(e.holder), length: e.length }) : t('event.longestRoadChanged.none');
     case 'largestArmyChanged':
       return e.holder ? t('event.largestArmyChanged.some', { holder: name(e.holder), size: e.size }) : t('event.largestArmyChanged.none');
-    case 'captured':
-      return t('event.captured', { player: name(e.player), from: name(e.from), kind: t(key(`piece.${e.kind}`)) });
+    case 'demolished':
+      return t(key(`event.demolished.${e.kind}`), { player: name(e.player), from: name(e.from), cost: handText(t, e.cost) });
     case 'turnEnded':
       return t('event.turnEnded', { player: name(e.player) });
     case 'turnStarted':
@@ -94,9 +94,11 @@ export function formatEvent(e: GameEvent, { t, name, me }: FormatContext): strin
   }
 }
 
-/** A refusal from the game core, with the detail that makes it useful. */
-export function describeGameError(t: Translate, e: GameError): string {
+/** A refusal from the game core, with the detail that makes it useful (`name` turns a player id in it into a name). */
+export function describeGameError(t: Translate, e: GameError, name?: (id: string) => string): string {
   const params: Params = {};
+  if (typeof e.player === 'string') params.player = name ? name(e.player) : e.player;
+  if (typeof e.until === 'number') params.until = e.until;
   if (typeof e.piece === 'string' && hasKey(`piece.${e.piece}`)) params.piece = t(key(`piece.${e.piece}`));
   if (typeof e.phase === 'string' && hasKey(`phase.${e.phase}`)) params.phase = t(key(`phase.${e.phase}`));
   if (e.cost && typeof e.cost === 'object') params.cost = handText(t, e.cost as Hand);
@@ -107,10 +109,10 @@ export function describeGameError(t: Translate, e: GameError): string {
 }
 
 /** Any error the server returns, in the player's language. */
-export function describeError(t: Translate, error: ServerError | undefined): string {
+export function describeError(t: Translate, error: ServerError | undefined, name?: (id: string) => string): string {
   if (!error) return t('server.internal');
   if (error.timeout === true) return t('net.timeout');
-  if (error.key === 'game' && error.error) return describeGameError(t, error.error);
+  if (error.key === 'game' && error.error) return describeGameError(t, error.error, name);
   const params: Params = {};
   if (typeof error.code === 'string') params.code = error.code;
   const k = `server.${error.key}`;
