@@ -148,6 +148,7 @@ export const tr = {
   'costs.ratios': 'Banka oranları',
   'costs.ratiosHelp': 'Verdiğin kaynak için, limanların ve rolün hesaba katıldı.',
   'costs.ratio': '{ratio}:1',
+  'costs.action.demolish': 'Yıkım bedeli (rolün aksiyonu)',
   'trade.title': 'Takas',
   'trade.bank': 'Bankayla',
   'trade.players': 'Oyuncuyla',

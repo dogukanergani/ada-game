@@ -66,6 +66,16 @@ describe('translations cover everything the core and the server can say', () => 
     }
   });
 
+  it('every priced role action has a title, and every kind it prices is a piece', () => {
+    for (const r of ROLE_LIST) {
+      for (const [name, a] of Object.entries(r.actions ?? {})) {
+        if (!a.costs) continue;
+        expect(has(`costs.action.${name}`), `costs.action.${name}`).toBe(true);
+        for (const kind of Object.keys(a.costs)) expect(has(`piece.${kind}`), `piece.${kind}`).toBe(true);
+      }
+    }
+  });
+
   it('resources, terrains, cards, pieces, modes and phases', () => {
     for (const r of RESOURCES) expect(has(`resource.${r}`) && has(`terrain.${r}`), r).toBe(true);
     expect(has('terrain.desert')).toBe(true);

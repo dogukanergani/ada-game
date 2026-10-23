@@ -7,6 +7,8 @@ import type { GameState, Hand, PieceKind, Resource, RoleId, Rng } from '../types
  * routes `{type:'roleAction', name}` to the acting player's own role.
  */
 export interface RoleActionDef {
+  /** what the action costs, by the kind it targets (public; the view lists it next to the build costs). The one table `check` and `apply` also read. */
+  costs?: Record<string, Hand>;
   /** true when the outcome involves chance or other players' hidden cards; the server's preview then shows only the verdict and cost */
   random?: boolean;
   /** null when legal. Must check phase, turn, cost, limits: everything. */

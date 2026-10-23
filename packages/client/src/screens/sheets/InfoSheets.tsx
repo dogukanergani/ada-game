@@ -4,7 +4,7 @@ import { countHand } from '../../game/controls';
 import { useT } from '../../i18n/context';
 import { handText } from '../../i18n/format';
 import type { LogEntry } from '../../net/store';
-import { CostTable } from '../../ui/CostTable';
+import { ActionCostTable, CostTable } from '../../ui/CostTable';
 import { LogList } from '../../ui/LogList';
 import { ResourceIcon } from '../../ui/ResourceIcon';
 import { Sheet } from '../../ui/Sheet';
@@ -18,6 +18,9 @@ export function CostsSheet({ view, onClose }: { view: GameView; onClose: () => v
     <Sheet title={t('costs.title')} onClose={onClose}>
       <p className="field-hint">{t('costs.forRole')}</p>
       <CostTable costs={mine.costs} />
+      {Object.entries(mine.actionCosts).map(([name, costs]) => (
+        <ActionCostTable key={name} name={name} costs={costs} />
+      ))}
       <h3>{t('costs.ratios')}</h3>
       <p className="field-hint">{t('costs.ratiosHelp')}</p>
       <ul className="ratio-list">

@@ -37,6 +37,7 @@ const isPiece = (x: unknown): x is PieceKind => x === 'road' || x === 'settlemen
  * (`lastBuilding`); a city whose owner has no settlement piece left to fall to (`settlementLimit`).
  */
 const demolish: RoleActionDef = {
+  costs: DEMOLISH_COSTS,
   check(s, pid, params, opts) {
     if (s.current !== pid) return err('notYourTurn');
     if (s.phase !== 'main') return err('wrongPhase', { phase: s.phase });

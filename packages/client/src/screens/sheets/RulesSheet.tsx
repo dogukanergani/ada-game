@@ -3,7 +3,7 @@ import {
 } from '@ada/game-core';
 import { useT } from '../../i18n/context';
 import { hasKey, type MessageKey } from '../../i18n';
-import { CostTable } from '../../ui/CostTable';
+import { ActionCostTable, CostTable } from '../../ui/CostTable';
 import { Sheet } from '../../ui/Sheet';
 
 const BASE = { ...BASE_COSTS, devCard: DEV_CARD_COST };
@@ -43,7 +43,10 @@ export function RulesSheet({ onClose }: { onClose: () => void }) {
           {ROLE_LIST.map((r) => (
             <div key={r.id} data-role={r.id}>
               <dt>{key(r.id, 'name') ? t(key(r.id, 'name')!) : r.id}</dt>
-              <dd>{key(r.id, 'desc') ? t(key(r.id, 'desc')!) : ''}</dd>
+              <dd>
+                {key(r.id, 'desc') ? t(key(r.id, 'desc')!) : ''}
+                {Object.entries(r.actions ?? {}).map(([name, a]) => (a.costs ? <ActionCostTable key={name} name={name} costs={a.costs} /> : null))}
+              </dd>
             </div>
           ))}
         </dl>

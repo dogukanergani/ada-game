@@ -1,10 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { BASE_COSTS, DEV_CARD_COST, DEV_DECK_COMPOSITION, DEV_CARD_KINDS, RESOURCES, ROLE_LIST } from '@ada/game-core';
+import { viewFor, BASE_COSTS, DEMOLISH_COSTS, DEV_CARD_COST, DEV_DECK_COMPOSITION, DEV_CARD_KINDS, RESOURCES, ROLE_LIST } from '@ada/game-core';
 import { I18nProvider } from '../src/i18n/context';
 import { dictionaries, translate } from '../src/i18n';
 import { createStorage, forgetIdentity } from '../src/net/storage';
 import { HeaderButtons } from '../src/ui/HeaderButtons';
+import { CostsSheet } from '../src/screens/sheets/InfoSheets';
 import { RulesSheet } from '../src/screens/sheets/RulesSheet';
 import { newGame, reach } from './fixtures';
 
@@ -35,12 +36,18 @@ describe('RulesSheet', () => {
       expect(text).toContain(en[`devCardDesc.${k}`]);
       expect(text).toContain(translate('en', 'rules.cards.count', { n: DEV_DECK_COMPOSITION[k] }));
     }
-    expect((html.match(/data-cost="/g) ?? []).length).toBe(4);
+    expect((html.match(/data-cost="[a-zA-Z]+"/g) ?? []).length).toBe(4); // the base rows; the demolition rows are tagged action:kind
     expect(html).toContain('data-rules="score"');
     // the base costs come from the core data, not a copy
     expect(BASE_COSTS.city.ore).toBe(3);
     expect(DEV_CARD_COST.ore).toBe(1);
     expect(text).toContain(`3 ${en['resource.ore']}`);
+  });
+
+  it('shows what a role demolition costs, from the core table', () => {
+    expect(html).toContain('data-action-costs="demolish"');
+    for (const kind of ['road', 'settlement', 'city'] as const) expect(html).toContain(`data-cost="demolish:${kind}"`);
+    expect(DEMOLISH_COSTS.city.ore).toBe(3);
   });
 
   it('has no leftover placeholder', () => {
@@ -60,6 +67,28 @@ describe('RulesSheet', () => {
     }
     for (const m of marks) expect(html, m).not.toContain(m);
     expect(html).not.toMatch(/data-resource=|hand-chip|devDeck|handCount/);
+  });
+});
+
+describe('CostsSheet for a role with a priced action', () => {
+  const s = newGame(3); // p0 Soldier, p1 Sage, p2 Sailor
+  const sheet = (pid: string) => render(<CostsSheet view={viewFor(s, pid)} onClose={() => undefined} />);
+
+  it('lists the demolition prices of the Soldier next to the build costs, exactly as the core pays them', () => {
+    const html = sheet('p0');
+    expect((html.match(/data-cost="/g) ?? []).length).toBe(4 + 3);
+    for (const kind of ['road', 'settlement', 'city'] as const) {
+      const row = html.match(new RegExp(`<tr data-cost="demolish:${kind}">(.*?)</tr>`))![1];
+      for (const r of RESOURCES) {
+        const n = DEMOLISH_COSTS[kind][r];
+        expect(row.includes(`> ${n} ${en[`resource.${r}`]}<`), `${kind} ${r}`).toBe(n > 0);
+      }
+    }
+    expect(strip(html)).toContain(en['costs.action.demolish']);
+  });
+
+  it('shows nothing extra to roles without one', () => {
+    for (const pid of ['p1', 'p2']) expect(sheet(pid)).not.toContain('data-action-costs');
   });
 });
 

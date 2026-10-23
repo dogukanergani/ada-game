@@ -2,6 +2,7 @@ import type { GameEvent } from './events';
 import type { MapDef } from './maps/mapdef';
 import { hiddenPoints, longestRoadFor, publicPoints } from './scoring';
 import { handCount } from './state';
+import { roleOf } from './roles/registry';
 import { bankRatioFor } from './trade';
 import { costFor, devCardCostFor } from './validate';
 import {
@@ -62,7 +63,12 @@ export interface GameView {
   largestArmy: { holder: string | null; size: number };
   winner: string | null;
   /** the viewer's own costs and bank ratios, already adjusted by their role and harbors (null for spectators) */
-  mine: { costs: Record<PieceKind | 'devCard', Hand>; bankRatios: Record<Resource, number> } | null;
+  mine: {
+    costs: Record<PieceKind | 'devCard', Hand>;
+    /** what the role's own actions cost, by action name and then by target kind (empty for a role without a priced action) */
+    actionCosts: Record<string, Record<string, Hand>>;
+    bankRatios: Record<Resource, number>;
+  } | null;
 }
 
 export function viewFor(state: GameState, playerId: string): GameView {
@@ -121,6 +127,9 @@ export function viewFor(state: GameState, playerId: string): GameView {
             city: costFor(state, playerId, 'city'),
             devCard: devCardCostFor(state, playerId),
           },
+          actionCosts: Object.fromEntries(
+            Object.entries(roleOf(state, playerId).actions ?? {}).flatMap(([name, a]) => (a.costs ? [[name, a.costs]] : [])),
+          ),
           bankRatios: Object.fromEntries(RESOURCES.map((r) => [r, bankRatioFor(state, playerId, r)])) as Record<Resource, number>,
         }
       : null,

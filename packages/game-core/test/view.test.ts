@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEV_CARD_KINDS, RESOURCES, applyAction, eventsFor, topologyOf, viewFor, type GameEvent, type GameState } from '../src';
+import { DEMOLISH_COSTS, DEV_CARD_KINDS, RESOURCES, applyAction, eventsFor, topologyOf, viewFor, type GameEvent, type GameState } from '../src';
 import { act, autoSetup, farVertices, give, giveCard, hand, mainPhase, mulberry32, newGame, putBuilding, stackDeck } from './helpers';
 
 const json = (v: unknown) => JSON.stringify(v);
@@ -109,6 +109,12 @@ describe('viewFor: what a player may see', () => {
     expect(b.mine!.costs.devCard).toEqual(hand({ wool: 1, grain: 1, ore: 1 }));
     expect(a.mine!.bankRatios.ore).toBe(4);
     expect(b.mine!.bankRatios.ore).toBe(3);
+  });
+
+  it('lists what the role actions of the viewer cost, from the same table the action pays from', () => {
+    const s = mainPhase(2, { roles: ['soldier', 'sage'] });
+    expect(viewFor(s, 'p0').mine!.actionCosts).toEqual({ demolish: DEMOLISH_COSTS });
+    expect(viewFor(s, 'p1').mine!.actionCosts).toEqual({});
   });
 
   it('is plain JSON and does not alias the state', () => {

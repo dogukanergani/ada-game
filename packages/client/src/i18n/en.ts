@@ -145,6 +145,7 @@ export const en = {
   'costs.ratios': 'Bank ratios',
   'costs.ratiosHelp': 'For the resource you give, with your harbors and role counted.',
   'costs.ratio': '{ratio}:1',
+  'costs.action.demolish': 'Demolition cost (role action)',
   'trade.title': 'Trade',
   'trade.bank': 'With the bank',
   'trade.players': 'With a player',
