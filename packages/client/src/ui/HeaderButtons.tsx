@@ -9,7 +9,7 @@ import { SettingsSheet } from '../screens/sheets/SettingsSheet';
  * game forces a sheet open (discarding, choosing a victim) both are off, and a
  * sheet already open is closed when the duty appears, so they never cover it.
  */
-export function HeaderButtons({ locked = false, rules = true }: { locked?: boolean; rules?: boolean }) {
+export function HeaderButtons({ locked = false, rules = true, vpToWin }: { locked?: boolean; rules?: boolean; vpToWin?: number }) {
   const t = useT();
   const [open, setOpen] = useState<'settings' | 'rules' | null>(null);
   useEffect(() => {
@@ -35,7 +35,7 @@ export function HeaderButtons({ locked = false, rules = true }: { locked?: boole
     <div className="header-buttons">
       {rules && button('rules', t('rules.open'), '?')}
       {button('settings', t('settings.title'), '⚙')}
-      {!locked && open === 'rules' && <RulesSheet onClose={() => setOpen(null)} />}
+      {!locked && open === 'rules' && <RulesSheet onClose={() => setOpen(null)} vpToWin={vpToWin} />}
       {!locked && open === 'settings' && <SettingsSheet onClose={() => setOpen(null)} />}
     </div>
   );

@@ -9,11 +9,11 @@ import { Sheet } from '../../ui/Sheet';
 const BASE = { ...BASE_COSTS, devCard: DEV_CARD_COST };
 
 /**
- * "How to play": read-only reference. It takes no game state at all (only
+ * "How to play": read-only reference. It takes no game state (only the public target score, if opened from a game; otherwise
  * rules data from the core), so it can neither change a game nor show anything
  * about a rival's hand, and closing it leaves everything where it was.
  */
-export function RulesSheet({ onClose }: { onClose: () => void }) {
+export function RulesSheet({ onClose, vpToWin }: { onClose: () => void; /** the target of the game this is opened from (public); left out on the home screen, where both modes are told */ vpToWin?: number }) {
   const t = useT();
   const key = (id: string, part: 'name' | 'desc'): MessageKey | null => (hasKey(`role.${id}.${part}`) ? (`role.${id}.${part}` as MessageKey) : null);
   const score = [
@@ -32,7 +32,7 @@ export function RulesSheet({ onClose }: { onClose: () => void }) {
           <li>{t('rules.loop.setup')}</li>
           <li>{t('rules.loop.roll')}</li>
           <li>{t('rules.loop.main')}</li>
-          <li>{t('rules.loop.win', { vp: MODES.standard.vpToWin, short: MODES.short.vpToWin })}</li>
+          <li>{t('rules.loop.win')}</li>
         </ol>
       </section>
 
@@ -69,6 +69,9 @@ export function RulesSheet({ onClose }: { onClose: () => void }) {
 
       <section className="stack" aria-labelledby="rules-score" data-rules="score">
         <h3 id="rules-score">{t('rules.score.title')}</h3>
+        <p data-rules="win">
+          {vpToWin !== undefined ? t('rules.score.win', { vp: vpToWin }) : t('rules.score.winBoth', { standard: MODES.standard.vpToWin, short: MODES.short.vpToWin })}
+        </p>
         <table className="cost-table">
           <tbody>
             {score.map(([label, points]) => (

@@ -73,7 +73,7 @@ export function Lobby({ lobby }: { lobby: LobbyView }) {
     <main className="lobby">
       <header className="screen-head">
         <h1>{t('lobby.title')}</h1>
-        <HeaderButtons />
+        <HeaderButtons vpToWin={MODES[lobby.mode].vpToWin} />
       </header>
 
       <CodeBadge code={lobby.code} />

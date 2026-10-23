@@ -138,7 +138,7 @@ export function GameScreen() {
     <div className="game" data-phase={view.phase}>
       <header className="game-top">
         <LastEvent view={view} log={shownLog} connected={connected} rolling={roll.rolling} />
-        <HeaderButtons locked={controls.forced !== null} />
+        <HeaderButtons locked={controls.forced !== null} vpToWin={view.vpToWin} />
       </header>
 
       <div className="game-table" data-players={view.players.length}>

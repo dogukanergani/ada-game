@@ -70,6 +70,16 @@ describe('RulesSheet', () => {
   });
 });
 
+describe('how the game ends', () => {
+  it('says both targets on the home screen, and the real one when opened from a game', () => {
+    expect(strip(render(<RulesSheet onClose={() => undefined} />))).toContain(translate('en', 'rules.score.winBoth', { standard: 10, short: 7 }));
+    const short = strip(render(<RulesSheet onClose={() => undefined} vpToWin={7} />));
+    expect(short).toContain(translate('en', 'rules.score.win', { vp: 7 }));
+    expect(short).not.toContain(translate('en', 'rules.score.winBoth', { standard: 10, short: 7 }));
+    expect(strip(render(<RulesSheet onClose={() => undefined} vpToWin={3} />))).toContain(translate('en', 'rules.score.win', { vp: 3 }));
+  });
+});
+
 describe('CostsSheet for a role with a priced action', () => {
   const s = newGame(3); // p0 Soldier, p1 Sage, p2 Sailor
   const sheet = (pid: string) => render(<CostsSheet view={viewFor(s, pid)} onClose={() => undefined} />);
