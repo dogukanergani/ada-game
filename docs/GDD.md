@@ -1,4 +1,4 @@
-# Ada: Oyun Tasarım Dokümanı (GDD) v0.4
+# Ada: Oyun Tasarım Dokümanı (GDD) v0.5
 
 22 Ekim 2026
 
@@ -189,7 +189,7 @@ Her oyuncu lobide bir rol seçer, seçmeyene kalan rollerden biri rastgele veril
 | Hedef | Maliyet (öneri) | Etkisi |
 | --- | --- | --- |
 | Yol | 1 cevher, 1 koyun | Yol yıkılır ve sahibinin stoğuna döner; en uzun yol yeniden hesaplanır |
-| Yerleşim (köy) | 2 cevher, 1 koyun | Yerleşim yıkılır ve sahibinin stoğuna döner; sahibi 1 puan kaybeder |
+| Yerleşim (köy) | 2 cevher, 1 koyun, 1 buğday | Yerleşim yıkılır ve sahibinin stoğuna döner; sahibi 1 puan kaybeder |
 | Şehir | 3 cevher, 2 koyun, 2 buğday | Şehir yerleşime düşer (şehir parçası sahibinin stoğuna döner); sahibi 1 puan kaybeder |
 
 - Turda en fazla 1 yıkım yapılır; yıkım kazanç sağlamadığı için maliyetler eski ele geçirme maliyetlerine göre düşürüldü.
@@ -207,7 +207,9 @@ Her oyuncu lobide bir rol seçer, seçmeyene kalan rollerden biri rastgele veril
 
 ## Kazanma ve puanlama
 
-Sırası gelen oyuncu hedef puana ulaştığı anda oyunu kazanır. Puan yalnızca kendi turunda kontrol edilir; rakibin turunda hedefe ulaşan oyuncu (ör. yolu kesilince en uzun yolu alan), kendi turu başlar başlamaz kazanır. Oyun modu oda kurulurken seçilir: Standart oyunda hedef 10 puan, Kısa oyunda 7 puandır; kısa oyunda ayrıca kaynak arzı ve haritadaki bölge sayısı azalır (banka stoğu 19 yerine 14, harita 19 yerine 14 bölge).
+Sırası gelen oyuncu hedef puana ulaştığı anda oyunu kazanır. Puan yalnızca kendi turunda kontrol edilir; rakibin turunda hedefe ulaşan oyuncu (ör. yolu kesilince en uzun yolu alan), kendi turu başlar başlamaz kazanır. Oyun modu oda kurulurken seçilir: Standart oyunda hedef 10 puan, Kısa oyunda 7 puandır; kısa oyunda ayrıca kaynak arzı ve haritadaki bölge sayısı azalır (banka stoğu 19 yerine 14, harita 19 yerine 14 bölge). Üçüncü bir seçenek olan Özel modda hedef puan 5 ile 15 arasında serbestçe seçilir; harita ve banka stoğu yalnızca oyuncu sayısına göre belirlenir, Özel modda değişmez.
+
+**Zamanlı mod (isteğe bağlı).** Oda kurulurken, seçilen modun yanında oda sahibi zamanlı modu açabilir: bir tur süresi (60, 90, 120, 150 ya da 180 saniye) ve bir toplam oyun süresi (30, 60 ya da 90 dakika) seçilir. Tur süresi dolan oyuncunun turu otomatik biter; o ana kadar yaptığı inşa ve takaslar kalır, kaynakları elinde durur. Toplam oyun süresi dolunca oyun hemen biter; o anda en yüksek puana sahip oyuncu kazanır. Puan eşitse birden fazla oyuncu birlikte kazanan ilan edilir. Zamanlı mod varsayılan olarak kapalıdır.
 
 | Kaynak | Puan |
 | --- | --- |
@@ -219,7 +221,7 @@ Sırası gelen oyuncu hedef puana ulaştığı anda oyunu kazanır. Puan yalnız
 
 - **Gizli puanlar:** Herkese açık puan, gizli kartları içermez; kazanma kontrolü sahibinin kendi turunda gizli puanları da sayar. Oyun bitince tüm kartlar açılır.
 - **En uzun yol:** Rakibin yerleşimi yolu keserse uzunluk yeniden hesaplanır. Beraberlikte mevcut sahip korunur; sahip yoksa ve birden çok oyuncu aynı uzunluktaysa kimse almaz.
-- **Oyun sonu:** Kazanan ve herkesin puanı gösterilir; oda sahibi aynı odada yeni oyun başlatabilir.
+- **Oyun sonu:** Kazanan ve herkesin puanı gösterilir; oda sahibi aynı odada yeni oyun başlatabilir. Zamanlı modda süre bitişiyle oyun bittiyse ve puan eşitliği varsa birden fazla kazanan birlikte gösterilir.
 
 ## Çok oyunculu ve oda sistemi
 
@@ -348,7 +350,7 @@ Verilen kararların hepsi işlendi.
 | Oyun adı | Ada, kalıcı |
 | Oyuncu sayısı | 2-5; 5 oyuncuda 30 bölgeli büyük harita |
 | Harita | Klasik harita; özel haritalar sonraki sürümde |
-| Oyun uzunluğu | Standart (10 puan) ve Kısa (7 puan; kaynak arzı ve bölge sayısı azalır; kısa harita 14 bölge) |
+| Oyun uzunluğu | Standart (10 puan), Kısa (7 puan; kaynak arzı ve bölge sayısı azalır; kısa harita 14 bölge) ve Özel (5-15 arası serbest hedef puan, harita ve banka oyuncu sayısına göre sabit kalır); hepsinde isteğe bağlı zamanlı mod (tur ve oyun süresi sınırı, süre bitince en yüksek puanlı kazanır, eşitlikte birden fazla kazanan) |
 | Roller | İlk sürümde 5 yeni rol (Asker, Bilge, Denizci, Diplomat, Hasatçı); v0 rolleri alınmaz |
 | Asker | Belli kaynakları ödeyerek rakibin yolunu, yerleşimini ya da şehrini yıkar (ele geçirme fazla güçlü bulunduğu için yıkıma çevrildi) |
 | Bot oyuncular | Şimdilik yok |
