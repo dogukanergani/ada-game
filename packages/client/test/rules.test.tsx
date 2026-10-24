@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { DEV_DECK_SIZE, viewFor, BASE_COSTS, DEMOLISH_COSTS, DEV_CARD_COST, DEV_DECK_COMPOSITION, DEV_CARD_KINDS, RESOURCES, ROLE_LIST } from '@ada/game-core';
+import { DEV_DECK_SIZE, publicPoints, viewFor, BASE_COSTS, DEMOLISH_COSTS, DEV_CARD_COST, DEV_DECK_COMPOSITION, DEV_CARD_KINDS, RESOURCES, ROLE_LIST } from '@ada/game-core';
 import { I18nProvider } from '../src/i18n/context';
 import { dictionaries, translate } from '../src/i18n';
 import { createStorage, forgetIdentity } from '../src/net/storage';
@@ -147,5 +147,55 @@ describe('the development deck info', () => {
     expect(html).toContain('data-action="deck-info"');
     expect(html).toContain(en['deck.info.open']);
     expect(html).not.toContain('role="dialog"');
+  });
+});
+
+describe('the points column of the cost tables', () => {
+  const s = newGame(3);
+  const rowOf = (html: string, kind: string) => html.match(new RegExp(`<tr data-cost="${kind}">(.*?)</tr>`))![1];
+  const pointsCell = (html: string, kind: string) => strip(rowOf(html, kind).match(/<td class="cost-points"[^>]*>(.*?)<\/td>/)![0]).trim();
+
+  it('is worth what the core scores: a road nothing, a settlement 1, a city 2 in place of the settlement', () => {
+    // the numbers come from the core, not from this test: build the pieces and ask for the points
+    const probe = newGame(3);
+    const me = probe.players[0].id;
+    expect(publicPoints(probe, me)).toBe(0);
+    probe.roads[0] = me;
+    expect(publicPoints(probe, me)).toBe(0);
+    probe.buildings[10] = { owner: me, kind: 'settlement' };
+    const settlement = publicPoints(probe, me);
+    probe.buildings[10].kind = 'city';
+    const city = publicPoints(probe, me);
+    expect([settlement, city]).toEqual([1, 2]);
+
+    for (const [pid] of [['p0'], ['p1']]) {
+      const html = render(<CostsSheet view={viewFor(s, pid)} onClose={() => undefined} />);
+      expect(pointsCell(html, 'road')).toBe(en['costs.points.none']);
+      expect(pointsCell(html, 'settlement')).toBe(en['costs.points.settlement']);
+      expect(pointsCell(html, 'settlement')).toContain(`+${settlement} `);
+      expect(pointsCell(html, 'city')).toContain(`+${city} `);
+      expect(pointsCell(html, 'city')).toContain(en['costs.points.cityNote']);
+      expect(pointsCell(html, 'devCard')).toBe(en['costs.points.devCard']);
+    }
+  });
+
+  it('shows the same column in the rules, where the base costs are', () => {
+    const html = render(<RulesSheet onClose={() => undefined} />);
+    expect(pointsCell(html, 'settlement')).toBe(en['costs.points.settlement']);
+    expect(pointsCell(html, 'city')).toContain(en['costs.points.city']);
+    expect(strip(html)).toContain(en['costs.col.points']);
+  });
+
+  it('gives no points for demolishing, since the Soldier gains nothing by it', () => {
+    const html = render(<CostsSheet view={viewFor(s, 'p0')} onClose={() => undefined} />);
+    for (const kind of ['road', 'settlement', 'city']) expect(pointsCell(html, `demolish:${kind}`)).toBe(en['costs.points.none']);
+    expect(html).toContain(`aria-label="${en['costs.points.noneLabel']}"`);
+  });
+
+  it('is written in Turkish as well', () => {
+    const tr = dictionaries.tr;
+    expect(tr['costs.points.settlement']).toBe('+1 puan');
+    expect(tr['costs.points.city']).toBe('+2 puan');
+    expect(tr['costs.points.devCard']).toBe('karta bağlı');
   });
 });

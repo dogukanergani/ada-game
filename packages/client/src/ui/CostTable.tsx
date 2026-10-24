@@ -5,7 +5,36 @@ import { ResourceIcon } from './ResourceIcon';
 
 export type CostRows = { road: Hand; settlement: Hand; city: Hand; devCard: Hand };
 
-/** The piece costs as a table; one component for the Costs sheet (a player's own, role included) and the rules (the base ones). */
+/** The points a piece is worth, in words: a road scores nothing, a settlement 1, a city 2 (in place of the settlement it replaces); a development card depends on the card. */
+function PointsCell({ kind }: { kind: 'road' | 'settlement' | 'city' | 'devCard' | 'none' }) {
+  const t = useT();
+  if (kind === 'settlement') return <td className="cost-points" data-points="1">{t('costs.points.settlement')}</td>;
+  if (kind === 'city') {
+    return (
+      <td className="cost-points" data-points="2">
+        {t('costs.points.city')}
+        <small className="cost-points-note">{t('costs.points.cityNote')}</small>
+      </td>
+    );
+  }
+  if (kind === 'devCard') return <td className="cost-points" data-points="card">{t('costs.points.devCard')}</td>;
+  return <td className="cost-points" data-points="0" aria-label={t('costs.points.noneLabel')}>{t('costs.points.none')}</td>;
+}
+
+function CostHead() {
+  const t = useT();
+  return (
+    <thead>
+      <tr>
+        <th scope="col">{t('costs.col.piece')}</th>
+        <th scope="col">{t('costs.col.cost')}</th>
+        <th scope="col" className="cost-points-head">{t('costs.col.points')}</th>
+      </tr>
+    </thead>
+  );
+}
+
+/** The piece costs as a table, with what each is worth in points; one component for the Costs sheet (a player's own, role included) and the rules (the base ones). */
 export function CostTable({ costs }: { costs: CostRows }) {
   const t = useT();
   const rows = [
@@ -16,6 +45,7 @@ export function CostTable({ costs }: { costs: CostRows }) {
   ] as const;
   return (
     <table className="cost-table">
+      <CostHead />
       <tbody>
         {rows.map(([k, label]) => (
           <tr key={k} data-cost={k}>
@@ -27,6 +57,7 @@ export function CostTable({ costs }: { costs: CostRows }) {
                 </span>
               ))}
             </td>
+            <PointsCell kind={k} />
           </tr>
         ))}
       </tbody>
@@ -42,6 +73,7 @@ export function ActionCostTable({ name, costs }: { name: string; costs: Record<s
     <section className="stack" data-action-costs={name}>
       <h3>{title}</h3>
       <table className="cost-table">
+        <CostHead />
         <tbody>
           {Object.entries(costs).map(([kind, hand]) => (
             <tr key={kind} data-cost={`${name}:${kind}`}>
@@ -53,6 +85,7 @@ export function ActionCostTable({ name, costs }: { name: string; costs: Record<s
                   </span>
                 ))}
               </td>
+              <PointsCell kind="none" />
             </tr>
           ))}
         </tbody>

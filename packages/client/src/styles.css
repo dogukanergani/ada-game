@@ -1414,8 +1414,26 @@ legend {
   font-weight: 500;
 }
 .cost-table th {
-  width: 36%;
+  width: 30%;
   font-weight: 700;
+}
+.cost-table thead th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: none;
+}
+.cost-table .cost-points {
+  width: 6.6em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.cost-points-note {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.25;
 }
 .cost-item {
   display: inline-flex;
