@@ -8,7 +8,7 @@ import { costFor, devCardCostFor } from './validate';
 import {
   RESOURCES,
   type Building, type DevCardInHand, type DevCardKind, type GameMode, type GameState, type Harbor, type Hand, type Phase,
-  type PieceKind, type Resource, type RoleId, type SetupState, type Tile, type TradeOffer,
+  type PieceKind, type Resource, type RoleId, type SetupState, type Tile, type TimerConfig, type TradeOffer,
 } from './types';
 
 /** What one player may know about a seat. Secrets are `null` for everyone but the owner. */
@@ -61,7 +61,8 @@ export interface GameView {
   demolishShield: Record<string, number>;
   longestRoad: { holder: string | null; length: number };
   largestArmy: { holder: string | null; size: number };
-  winner: string | null;
+  winners: string[];
+  timer: TimerConfig | null;
   /** the viewer's own costs and bank ratios, already adjusted by their role and harbors (null for spectators) */
   mine: {
     costs: Record<PieceKind | 'devCard', Hand>;
@@ -118,7 +119,8 @@ export function viewFor(state: GameState, playerId: string): GameView {
     demolishShield: state.demolishShield,
     longestRoad: state.longestRoad,
     largestArmy: state.largestArmy,
-    winner: state.winner,
+    winners: state.winners,
+    timer: state.timer,
     mine: seated
       ? {
           costs: {

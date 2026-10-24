@@ -1,4 +1,5 @@
 import type { Action, ApplyResult } from './actions';
+import { err } from './events';
 import { MAX_ROADS_PER_CARD } from './constants';
 import { produce, tilesHit } from './production';
 import { roleOf } from './roles/registry';
@@ -15,11 +16,11 @@ import { RESOURCES, type DevCardKind, type GameState, type Hand, type Resource, 
  * for highlighting, applies the move to a copy, and returns the new state and
  * the events that happened. Randomness comes only from `rng`.
  */
-export function applyAction(prev: GameState, pid: string, action: Action, rng: Rng): ApplyResult {
+export function applyAction(prev: GameState, pid: string, action: Action, rng: Rng, now?: number): ApplyResult {
   const error = validate(prev, pid, action);
   if (error) return { ok: false, error };
 
-  const ctx: Ctx = { s: cloneState(prev), rng, events: [], boardChanged: false };
+  const ctx: Ctx = { s: cloneState(prev), rng, now, events: [], boardChanged: false };
   dispatch(ctx, pid, action);
   if (ctx.boardChanged) updateLongestRoad(ctx);
   checkWin(ctx);
@@ -30,7 +31,7 @@ export function applyAction(prev: GameState, pid: string, action: Action, rng: R
  * Deep copy of a state. `map`, `tiles` and `harbors` are fixed when the game
  * is created and never change afterwards, so the copy shares them.
  */
-function cloneState(prev: GameState): GameState {
+export function cloneState(prev: GameState): GameState {
   const { map, tiles, harbors, ...rest } = prev;
   return { ...structuredClone(rest), map, tiles, harbors };
 }
@@ -119,6 +120,7 @@ function placeRoad(ctx: Ctx, pid: string, e: number) {
       s.phase = 'roll';
       s.current = s.players[0].id;
       s.turn = 1;
+      startTurnClock(ctx);
       ctx.events.push({ type: 'turnStarted', player: s.current, turn: s.turn });
     } else {
       setup.step = 'settlement';
@@ -328,6 +330,24 @@ function playMonopoly(ctx: Ctx, pid: string, resource: Resource) {
 
 /* ---------------- turn ---------------- */
 
+/** A timed game restarts the turn clock whenever a turn begins; an untimed one never looks at `now`. */
+function startTurnClock(ctx: Ctx) {
+  if (ctx.s.timer && ctx.now !== undefined) ctx.s.turnStartedAt = ctx.now;
+}
+
+/**
+ * Used when a turn runs out in the middle of free road building: the unplaced roads are lost (there is no action for it, and a
+ * player who has stopped playing should not get them placed for them).
+ */
+export function forfeitRoadBuilding(prev: GameState, now?: number): ApplyResult {
+  if (prev.phase !== 'roadBuilding') return { ok: false, error: err('wrongPhase', { phase: prev.phase }) };
+  const ctx: Ctx = { s: cloneState(prev), rng: () => 0, now, events: [], boardChanged: false };
+  ctx.events.push({ type: 'roadBuildingEnded', player: prev.current, unused: prev.roadBuildingLeft });
+  ctx.s.roadBuildingLeft = 0;
+  finishInterruption(ctx.s);
+  return { ok: true, state: ctx.s, events: ctx.events };
+}
+
 function endTurn(ctx: Ctx, pid: string) {
   const { s } = ctx;
   ctx.events.push({ type: 'turnEnded', player: pid });
@@ -338,5 +358,6 @@ function endTurn(ctx: Ctx, pid: string) {
   s.offers = [];
   s.turn += 1;
   s.turnFlags = { devPlayed: false, counters: {} };
+  startTurnClock(ctx);
   ctx.events.push({ type: 'turnStarted', player: s.current, turn: s.turn });
 }

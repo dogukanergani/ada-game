@@ -106,16 +106,19 @@ export function checkWin(ctx: Ctx) {
   const { s } = ctx;
   if (s.phase === 'finished' || s.phase === 'setup') return;
   const pts = totalPoints(s, s.current);
-  if (pts >= s.vpToWin) {
-    s.phase = 'finished';
-    s.winner = s.current;
-    // drop any interrupted step (robber, free roads, open offers): the game is over
-    s.returnPhase = null;
-    s.stealFrom = [];
-    s.roadBuildingLeft = 0;
-    s.pendingDiscards = {};
-    s.offers = [];
-    ctx.events.push({ type: 'gameWon', player: s.current, points: pts });
-  }
+  if (pts >= s.vpToWin) finishGame(ctx, [s.current], pts, 'target');
+}
+
+/** Ends the game with these winners. Drops any interrupted step (robber, free roads, open offers). */
+export function finishGame(ctx: Ctx, winners: string[], points: number, reason: 'target' | 'time') {
+  const { s } = ctx;
+  s.phase = 'finished';
+  s.winners = winners;
+  s.returnPhase = null;
+  s.stealFrom = [];
+  s.roadBuildingLeft = 0;
+  s.pendingDiscards = {};
+  s.offers = [];
+  ctx.events.push({ type: 'gameWon', players: winners, points, reason });
 }
 

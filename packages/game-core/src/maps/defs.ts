@@ -53,6 +53,6 @@ export const MAPS: Record<string, MapDef> = {
 
 /** Which map a game uses. A 14-tile board is too tight for 5 players, so short games with 5 use the classic board. */
 export function mapFor(mode: GameMode, playerCount: number): MapDef {
-  if (mode === 'standard') return playerCount >= 5 ? LARGE_30 : CLASSIC_19;
+  if (mode === 'standard' || mode === 'custom') return playerCount >= 5 ? LARGE_30 : CLASSIC_19;
   return playerCount >= 5 ? CLASSIC_19 : SHORT_14;
 }

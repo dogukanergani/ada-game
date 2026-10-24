@@ -128,7 +128,12 @@ const samples: Record<GameEvent['type'], GameEvent[]> = {
   ],
   turnEnded: [{ type: 'turnEnded', player: 'a' }],
   turnStarted: [{ type: 'turnStarted', player: 'a', turn: 4 }],
-  gameWon: [{ type: 'gameWon', player: 'a', points: 10 }],
+  gameWon: [
+    { type: 'gameWon', players: ['a'], points: 10, reason: 'target' },
+    { type: 'gameWon', players: ['a', 'b'], points: 6, reason: 'time' },
+    { type: 'gameWon', players: ['a', 'b', 'c'], points: 4, reason: 'time' },
+  ],
+  turnTimedOut: [{ type: 'turnTimedOut', player: 'a' }],
 };
 
 describe('formatEvent', () => {

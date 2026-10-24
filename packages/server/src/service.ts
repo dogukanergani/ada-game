@@ -1,4 +1,4 @@
-import { legalMovesFor, type Action, type GameEvent, type LegalMoves, type Rng } from '@ada/game-core';
+import { legalMovesFor, type Action, type GameEvent, type GameMode, type LegalMoves, type Rng } from '@ada/game-core';
 import type { PreviewResult } from '@ada/protocol';
 import { playAction, previewAction, startGame } from './game/session';
 import { freshCode, parseCode } from './rooms/code';
@@ -115,7 +115,7 @@ export class RoomService {
     return this.inRoom(playerId, (r) => lobby.setRole(r, playerId, role));
   }
 
-  setMode(playerId: string, mode: 'standard' | 'short') {
+  setMode(playerId: string, mode: GameMode) {
     return this.inRoom(playerId, (r) => lobby.setMode(r, playerId, mode));
   }
 

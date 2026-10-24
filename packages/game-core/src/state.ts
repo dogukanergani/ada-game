@@ -8,6 +8,8 @@ import { RESOURCES, type GameState, type Hand, type PieceKind, type Player, type
 export interface Ctx {
   s: GameState;
   rng: Rng;
+  /** the caller's clock in ms; only read when the game is timed */
+  now?: number;
   events: GameEvent[];
   /** set when roads or buildings changed, so awards are recomputed */
   boardChanged: boolean;

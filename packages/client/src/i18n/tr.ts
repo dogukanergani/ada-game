@@ -225,6 +225,7 @@ export const tr = {
   'dev.reason.bank': 'Bankada bu kaynaklar yok.',
   'over.title': 'Oyun bitti',
   'over.winner': '{player} kazandı!',
+  'over.tie': '{players} berabere kazandı!',
   'over.scores': 'Puanlar',
   'over.points': '{n} puan',
   'over.hidden': '{n} gizli puan kartı dahil',
@@ -259,6 +260,7 @@ export const tr = {
   'devCardDesc.victoryPoint': 'Gizli bir puan. Oynanmaz, oyun bitince ya da kazanırken sayılır.',
   'mode.standard': 'Standart (10 puan)',
   'mode.short': 'Kısa (7 puan)',
+  'mode.custom': 'Özel',
   'phase.setup': 'Kurulum',
   'phase.roll': 'Zar',
   'phase.discard': 'Kart atma',
@@ -268,6 +270,7 @@ export const tr = {
   'phase.main': 'Tur',
   'phase.finished': 'Bitti',
   'list.none': 'hiç',
+  'list.andLast': '{rest} ve {last}',
   'list.and': ' ve ',
 
   /* ---------- roller ---------- */
@@ -319,6 +322,8 @@ export const tr = {
   'event.turnEnded': '{player} turunu bitirdi.',
   'event.turnStarted': 'Sıra {player} oyuncusunda (tur {turn}).',
   'event.gameWon': '{player} kazandı ({points} puan)!',
+  'event.gameWon.tie': '{players} berabere kazandı ({points} puan)!',
+  'event.turnTimedOut': '{player} için süre doldu, tur otomatik bitti.',
 
   /* ---------- oyun çekirdeğinin hataları ---------- */
   'error.gameOver': 'Oyun bitti. Yeni oyun için oda sahibinin lobiye dönmesini bekle.',
@@ -374,6 +379,8 @@ export const tr = {
   'error.invalidSetup': 'Oyun kurulamadı.',
   'error.invalidSetup.playerCount': 'Oyun 2 ile 5 oyuncuyla kurulur.',
   'error.invalidSetup.mode': 'Oyun modu geçersiz.',
+  'error.invalidSetup.targetScore': 'Hedef puan 5 ile 15 arasında bir tam sayı olmalı ve yalnızca Özel modda verilir.',
+  'error.invalidSetup.timer': 'Süre sınırları geçerli değil.',
   'error.invalidSetup.duplicateId': 'Bir oyuncu iki kez eklenmiş. Lobiyi yenileyip tekrar dene.',
   'error.invalidSetup.badId': 'Bir oyuncunun kimliği geçersiz. Lobiyi yenileyip tekrar dene.',
   'error.invalidSetup.unknownRole': 'Bir oyuncunun rolü geçersiz. Rolleri yeniden seçip tekrar dene.',

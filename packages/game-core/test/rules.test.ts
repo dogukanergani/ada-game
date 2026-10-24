@@ -532,7 +532,7 @@ describe('longest road and winning', () => {
     give(s, 'p0', hand({ lumber: 1, brick: 1, wool: 1, grain: 1 }));
     s = act(s, 'p0', { type: 'placeSettlement', vertex: end });
     expect(s.phase).toBe('finished');
-    expect(s.winner).toBe('p0');
+    expect(s.winners).toEqual(['p0']);
     expect(validate(s, 'p0', { type: 'endTurn' })).toMatchObject({ type: 'gameOver' });
   });
 
@@ -543,10 +543,10 @@ describe('longest road and winning', () => {
     give(s, 'p0', hand({ lumber: 1 }));
     s = act(s, 'p0', { type: 'offerTrade', give: { lumber: 1 }, want: { ore: 1 } });
     expect(s.phase).toBe('main');
-    expect(s.winner).toBeNull();
+    expect(s.winners).toEqual([]);
     s = act(s, 'p0', { type: 'endTurn' });
     expect(s.phase).toBe('finished');
-    expect(s.winner).toBe('p1');
+    expect(s.winners).toEqual(['p1']);
   });
 });
 

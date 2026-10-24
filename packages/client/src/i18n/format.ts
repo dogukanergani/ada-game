@@ -8,6 +8,12 @@ export function handText(t: Translate, hand: Partial<Hand> | null | undefined): 
   return parts.length ? parts.join(', ') : t('list.none');
 }
 
+/** "A", "A and B", "A, B and C": the last name is joined with a word, so it reads right in either language. */
+export function nameList(t: Translate, names: string[]): string {
+  if (names.length < 2) return names.join('');
+  return t('list.andLast', { rest: names.slice(0, -1).join(', '), last: names[names.length - 1] });
+}
+
 export interface FormatContext {
   t: Translate;
   /** a player's display name from their id */
@@ -90,7 +96,11 @@ export function formatEvent(e: GameEvent, { t, name, me }: FormatContext): strin
     case 'turnStarted':
       return t('event.turnStarted', { player: name(e.player), turn: e.turn });
     case 'gameWon':
-      return t('event.gameWon', { player: name(e.player), points: e.points });
+      return e.players.length === 1
+        ? t('event.gameWon', { player: name(e.players[0]), points: e.points })
+        : t('event.gameWon.tie', { players: nameList(t, e.players.map(name)), points: e.points });
+    case 'turnTimedOut':
+      return t('event.turnTimedOut', { player: name(e.player) });
   }
 }
 

@@ -88,7 +88,7 @@ describe('viewFor: what a player may see', () => {
   it('everything is revealed once the game is over', () => {
     const s = richGame();
     s.phase = 'finished';
-    s.winner = 'p1';
+    s.winners = ['p1'];
     const them = viewFor(s, 'p0').players.find((p) => p.id === 'p1')!;
     expect(them.devCards).toHaveLength(2);
     expect(them.hiddenPoints).toBe(1);

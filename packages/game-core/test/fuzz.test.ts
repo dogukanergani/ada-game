@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEV_CARD_KINDS, DEV_DECK_SIZE, canAfford, costFor, PIECE_LIMITS, RESOURCES, ROLE_LIST, applyAction, bankStockFor, createGame, legalBankTrades,
   legalCityVertices, legalDevPlays, legalRoadEdges, legalRobberTiles, legalRoleActions, legalSettlementVertices, legalStealVictims,
-  longestRoadFor, publicPoints, topologyOf, totalPoints, validate, viewFor,
+  longestRoadFor, publicPoints, tickTimers, topologyOf, totalPoints, validate, viewFor,
   type Action, type GameEvent, type GameMode, type GameState, type Hand, type Rng,
 } from '../src';
 import { mulberry32 } from './helpers';
@@ -98,8 +98,28 @@ function invariants(s: GameState) {
   must((s.turnFlags.counters.demolish ?? 0) <= 1, 'more than one demolition in a turn');
   for (const [pid, until] of Object.entries(s.demolishShield)) must(ids.has(pid) && Number.isInteger(until), 'bad demolish shield');
   must(s.robber >= 0 && s.robber < s.tiles.length && s.tiles[s.robber] !== undefined, 'robber tile');
-  must((s.phase === 'finished') === (s.winner !== null), 'winner vs phase');
-  if (s.winner) must(totalPoints(s, s.winner) >= s.vpToWin, 'winner below the target');
+  must((s.phase === 'finished') === (s.winners.length > 0), 'winners vs phase');
+  must(new Set(s.winners).size === s.winners.length && s.winners.every((w) => ids.has(w)), 'bad winners list');
+  if (s.winners.length) {
+    const totals = s.players.map((p) => totalPoints(s, p.id));
+    const top = Math.max(...totals);
+    const [first] = s.winners;
+    if (s.winners.length === 1 && totalPoints(s, first) >= s.vpToWin) {
+      // won by points, on their own turn
+      must(first === s.current, 'a win by points belongs to the player whose turn it is');
+    } else {
+      // only the game time can end a game level or below the target: everyone on the top score wins, nobody else
+      must(s.timer !== null, 'a game without a timer ended without a winner at the target');
+      must(s.winners.every((w) => totalPoints(s, w) === top), 'a winner is not on the top score');
+      must(s.players.filter((p) => totalPoints(s, p.id) === top).length === s.winners.length, 'a top scorer is missing from the winners');
+    }
+  }
+  // the clock fields exist exactly when the game is timed
+  must((s.timer === null) === (s.gameStartedAt === null), 'timer vs gameStartedAt');
+  if (s.timer === null) must(s.turnStartedAt === null, 'an untimed game has a turn clock');
+  if (s.timer) must(s.turnStartedAt !== null || s.phase === 'setup' || (s.phase === 'finished' && s.turn === 0), 'a timed game past setup has a turn clock');
+  must(s.vpToWin >= 5 && s.vpToWin <= 15, 'target score out of range');
+  if (s.mode !== 'custom') must(s.vpToWin === (s.mode === 'short' ? 7 : 10), 'fixed mode target changed');
   if (s.phase !== 'finished' && s.phase !== 'setup') {
     // nobody sits on the target during their own turn without having won
     must(totalPoints(s, s.current) < s.vpToWin, 'current player at the target but game not finished');
@@ -195,9 +215,12 @@ interface Stats {
   hits: number;
   robbed: number;
   refusedProbes: number;
+  timedOutTurns: number;
+  endedByTime: number;
 }
 
-const newStats = (): Stats => ({ games: 0, finished: 0, steps: 0, byType: {}, roleWins: {}, rolePlays: {}, stolen: 0, demolished: 0, blocked: 0, hits: 0, robbed: 0, refusedProbes: 0 });
+const newStats = (): Stats => ({ games: 0, finished: 0, steps: 0, byType: {}, roleWins: {}, rolePlays: {}, stolen: 0, demolished: 0, blocked: 0, hits: 0, robbed: 0, refusedProbes: 0, timedOutTurns: 0, endedByTime: 0 });
+const T0 = 1_700_000_000_000;
 
 const BAD_PROBES: unknown[] = [
   { type: 'placeSettlement', vertex: -1 }, { type: 'placeRoad', edge: 99999 }, { type: 'bankTrade', give: 'gold', get: 'ore' },
@@ -205,19 +228,42 @@ const BAD_PROBES: unknown[] = [
   { type: 'acceptTrade', offerId: 12345 }, null, 'roll', { type: 'upgradeCity', vertex: 0.5 },
 ];
 
-function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxSteps = 5000, bot = moves): GameState {
+/** Extra game setup for a playout: a custom target, and/or the timed mode with a fake clock that jumps forward as the bots play. */
+interface Variant {
+  targetScore?: number;
+  timer?: { turnSeconds: number; gameSeconds: number };
+}
+
+function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxSteps = 5000, bot = moves, variant: Variant = {}): GameState {
   const rng = mulberry32(seed * 7919 + n);
   const roles = ROLE_LIST.map((r) => r.id);
   const shift = seed % roles.length;
   const chosen = Array.from({ length: n }, (_, i) => roles[(shift + i) % roles.length]);
-  const created = createGame({ players: chosen.map((role, i) => ({ id: `p${i}`, name: `P${i}`, role })), mode }, rng);
+  const created = createGame({ players: chosen.map((role, i) => ({ id: `p${i}`, name: `P${i}`, role })), mode, ...variant }, rng, T0);
   must(created.ok, 'createGame failed');
   let s = (created as { ok: true; state: GameState }).state;
   invariants(s);
 
   let actionsThisTurn = 0;
   let lastTurn = s.turn;
+  let now = T0;
   for (let step = 0; step < maxSteps && s.phase !== 'finished'; step++) {
+    if (variant.timer) {
+      // time passes (up to 40 s a move); whatever the clock then forces must keep every invariant too
+      now += Math.floor(rng() * 40_000);
+      const t = tickTimers(s, rng, now);
+      must(t.ok, 'tickTimers failed');
+      if (t.ok && t.events.length) {
+        checkTransition(s, t.state, t.events, stats);
+        s = t.state;
+        invariants(s);
+        for (const e of t.events) {
+          if (e.type === 'turnTimedOut') stats.timedOutTurns++;
+          if (e.type === 'gameWon' && e.reason === 'time') stats.endedByTime++;
+        }
+        if (s.phase === 'finished') break;
+      }
+    }
     const ms = bot(s, rng, actionsThisTurn);
     must(ms.length > 0, `stuck in phase ${s.phase}`);
     const m = chooseWeighted(ms, rng);
@@ -226,7 +272,7 @@ function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxStep
     const checkPurity = step % 10 === 0;
     const before = checkPurity ? JSON.stringify(s) : '';
     const verdict = validate(s, m.pid, m.action);
-    const r = applyAction(s, m.pid, m.action, rng);
+    const r = applyAction(s, m.pid, m.action, rng, now);
     must(verdict === null, `a listed move failed validation: ${JSON.stringify(m.action)} -> ${JSON.stringify(verdict)}`);
     must(r.ok, `a validated move was refused: ${JSON.stringify(m.action)} ${JSON.stringify((r as { error?: unknown }).error)}`);
     if (checkPurity) must(JSON.stringify(s) === before, 'applyAction mutated its input');
@@ -264,8 +310,10 @@ function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxStep
   for (const p of s.players) stats.rolePlays[p.role] = (stats.rolePlays[p.role] ?? 0) + 1;
   if (s.phase === 'finished') {
     stats.finished++;
-    const w = s.players.find((p) => p.id === s.winner)!;
-    stats.roleWins[w.role] = (stats.roleWins[w.role] ?? 0) + 1;
+    for (const id of s.winners) {
+      const w = s.players.find((p) => p.id === id)!;
+      stats.roleWins[w.role] = (stats.roleWins[w.role] ?? 0) + 1;
+    }
   }
   return s;
 }
@@ -310,6 +358,35 @@ describe('random playouts', () => {
     for (const t of ['upgradeCity', 'placeSettlement', 'buyDevCard', 'bankTrade', 'moveRobber', 'playKnight']) {
       if (!stats.byType[t]) throw new Error('the greedy bot never played ' + t);
     }
+  }, 120_000);
+
+  it('keeps every invariant in custom-target games (5 and 15 points included)', () => {
+    const stats = newStats();
+    let seed = 8000;
+    for (const targetScore of [5, 8, 15]) {
+      for (let n = 2; n <= 5; n++) for (let g = 0; g < 4; g++) playGame(seed++, n, 'custom', stats, 6000, moves, { targetScore });
+    }
+    expect(stats.games).toBe(48);
+    expect(stats.finished).toBeGreaterThan(30);
+  }, 120_000);
+
+  it('keeps every invariant in timed games, where the clock forces turns to end and ends games early', () => {
+    const stats = newStats();
+    let seed = 9000;
+    const timers = [
+      { turnSeconds: 60, gameSeconds: 900 },
+      { turnSeconds: 60, gameSeconds: 2_000_000 },
+      { turnSeconds: 150, gameSeconds: 5400 },
+    ];
+    for (const mode of ['standard', 'short', 'custom'] as GameMode[]) {
+      for (let n = 2; n <= 5; n++) {
+        for (const timer of timers) playGame(seed++, n, mode, stats, 6000, moves, { timer, ...(mode === 'custom' ? { targetScore: 9 } : {}) });
+      }
+    }
+    expect(stats.games).toBe(36);
+    expect(stats.timedOutTurns).toBeGreaterThan(50);
+    expect(stats.endedByTime).toBeGreaterThan(3);
+    expect(stats.byType.endTurn).toBeGreaterThan(0);
   }, 120_000);
 
   it('the same seed replays to the same final state', () => {

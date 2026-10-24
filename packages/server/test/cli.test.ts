@@ -102,7 +102,7 @@ describe('cli: autoplay over real sockets', () => {
       const { views, acted } = await playByAutoplay(n);
       const final = [...views.values()][0];
       expect(final.phase).toBe('finished');
-      expect(final.winner).not.toBeNull();
+      expect(final.winners).toHaveLength(1);
       expect(acted).toBeGreaterThan(50);
     }, 120_000);
   }

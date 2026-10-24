@@ -3,12 +3,12 @@ import { generateHarbors, generateTiles, shuffle } from './maps/generate';
 import type { MapDef } from './maps/mapdef';
 import { mapFor } from './maps/defs';
 import { validateMap } from './maps/topology';
-import { DEV_DECK_COMPOSITION, MAX_PLAYERS, MIN_PLAYERS, MODES, bankStockFor } from './constants';
+import { CUSTOM_TARGET_MAX, CUSTOM_TARGET_MIN, DEV_DECK_COMPOSITION, MAX_PLAYERS, MIN_PLAYERS, MODES, bankStockFor } from './constants';
 import { emptyHand } from './state';
 import { isRoleId } from './roles/registry';
 import {
   DEV_CARD_KINDS, RESOURCES,
-  type DevCardKind, type GameMode, type GameState, type Player, type RoleId, type Rng,
+  type DevCardKind, type GameMode, type GameState, type Player, type RoleId, type Rng, type TimerConfig,
 } from './types';
 
 export interface GameConfig {
@@ -16,11 +16,18 @@ export interface GameConfig {
   mode: GameMode;
   /** custom map; defaults to the map chosen for the mode and player count */
   map?: MapDef;
+  /** points to win; required (an integer from 5 to 15) in a custom game and not allowed in the others */
+  targetScore?: number;
+  /** timed mode: limits in seconds. Needs `now` passed to createGame. Omitted or null = untimed. */
+  timer?: TimerConfig | null;
 }
 
 export type CreateResult = { ok: true; state: GameState } | { ok: false; error: GameError };
 
-export function createGame(config: GameConfig, rng: Rng): CreateResult {
+const positiveInt = (x: unknown): x is number => Number.isInteger(x) && (x as number) > 0;
+
+/** `now` (ms) is read only for a timed game, where it starts the game clock. */
+export function createGame(config: GameConfig, rng: Rng, now?: number): CreateResult {
   const n = config.players.length;
   if (n < MIN_PLAYERS || n > MAX_PLAYERS) return { ok: false, error: err('invalidSetup', { reason: 'playerCount', count: n }) };
   if (!(config.mode in MODES)) return { ok: false, error: err('invalidSetup', { reason: 'mode' }) };
@@ -28,6 +35,17 @@ export function createGame(config: GameConfig, rng: Rng): CreateResult {
   if (config.players.some((p) => typeof p.id !== 'string' || !p.id)) return { ok: false, error: err('invalidSetup', { reason: 'badId' }) };
   if (config.players.some((p) => !isRoleId(p.role))) return { ok: false, error: err('invalidSetup', { reason: 'unknownRole' }) };
   if (new Set(config.players.map((p) => p.role)).size !== n) return { ok: false, error: err('invalidSetup', { reason: 'duplicateRole' }) };
+
+  if (config.mode === 'custom') {
+    const t = config.targetScore;
+    if (!Number.isInteger(t) || t! < CUSTOM_TARGET_MIN || t! > CUSTOM_TARGET_MAX) return { ok: false, error: err('invalidSetup', { reason: 'targetScore' }) };
+  } else if (config.targetScore !== undefined) {
+    return { ok: false, error: err('invalidSetup', { reason: 'targetScore' }) };
+  }
+  const timer = config.timer ?? null;
+  if (timer && (!positiveInt(timer.turnSeconds) || !positiveInt(timer.gameSeconds) || !Number.isFinite(now))) {
+    return { ok: false, error: err('invalidSetup', { reason: 'timer' }) };
+  }
 
   const map = structuredClone(config.map ?? mapFor(config.mode, n));
   const problems = validateMap(map);
@@ -53,7 +71,10 @@ export function createGame(config: GameConfig, rng: Rng): CreateResult {
 
   const state: GameState = {
     mode: config.mode,
-    vpToWin: MODES[config.mode].vpToWin,
+    vpToWin: config.mode === 'custom' ? config.targetScore! : MODES[config.mode].vpToWin,
+    timer: timer ? { turnSeconds: timer.turnSeconds, gameSeconds: timer.gameSeconds } : null,
+    gameStartedAt: timer ? now! : null,
+    turnStartedAt: null,
     map,
     tiles,
     harbors: generateHarbors(map, rng),
@@ -79,7 +100,7 @@ export function createGame(config: GameConfig, rng: Rng): CreateResult {
     demolishShield: {},
     longestRoad: { holder: null, length: 0 },
     largestArmy: { holder: null, size: 0 },
-    winner: null,
+    winners: [],
   };
   return { ok: true, state };
 }

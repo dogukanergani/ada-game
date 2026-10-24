@@ -27,7 +27,7 @@ export function renderState(v: GameView): string {
   if (v.phase === 'discard') lines.push(`must discard: ${Object.entries(v.pendingDiscards).map(([p, n]) => `${who(p)} ${n}`).join(', ')}`);
   if (v.phase === 'steal') lines.push(`steal from: ${v.stealFrom.map(who).join(', ')}`);
   if (v.phase === 'roadBuilding') lines.push(`free roads left: ${v.roadBuildingLeft}`);
-  if (v.winner) lines.push(`WINNER: ${who(v.winner)}`);
+  if (v.winners.length) lines.push(`WINNER: ${v.winners.map(who).join(' & ')}`);
   lines.push('');
   for (const p of v.players) {
     const own = Object.entries(v.buildings).filter(([, b]) => b.owner === p.id);

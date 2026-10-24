@@ -120,14 +120,14 @@ export function measure(moves: MoveFn, games: number, seed0: number): Measuremen
             if (mt) { c.soldierMainTurns += mt.turns; c.soldierTurnsDemolishLegal += mt.demolishLegal; c.soldierTurnsBigTargetLegal += mt.cityOrSettlementTargetLegal; c.soldierOreAtTurnStart += mt.ore; }
             const bucket = did > 0 ? c.demolished : c.notDemolished;
             bucket.played++;
-            if (s.winner === sol.id) bucket.won++;
+            if (s.winners.includes(sol.id)) bucket.won++;
           }
         }
         for (const p of s.players) {
           for (const t of [overall[p.role], byCount[n][p.role], byMode[mode][p.role]]) {
             t.played++;
             t.expected += 1 / n;
-            if (p.id === s.winner) t.won++;
+            if (s.winners.includes(p.id)) t.won++;
           }
         }
       }

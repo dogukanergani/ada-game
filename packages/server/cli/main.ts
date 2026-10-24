@@ -81,7 +81,7 @@ const onGame = (kind: string) => (p: { view: GameView; events: { type: string }[
     for (const e of p.events) say(`  * ${renderEvent(e as never)}`);
     if (kind === 'snapshot') say('game state received (type "state" or "map")');
     else if (p.view.current === p.view.me && p.view.phase !== 'finished') say(`  your move (phase ${p.view.phase})`);
-    if (p.view.phase === 'finished') say(`game over, winner: ${p.view.players.find((q) => q.id === p.view.winner)?.name}`);
+    if (p.view.phase === 'finished') say(`game over, winner: ${p.view.players.filter((q) => p.view.winners.includes(q.id)).map((q) => q.name).join(' & ')}`);
   }
   scheduleAuto();
 };

@@ -222,6 +222,7 @@ export const en = {
   'dev.reason.bank': 'The bank does not have those resources.',
   'over.title': 'Game over',
   'over.winner': '{player} won!',
+  'over.tie': '{players} won together!',
   'over.scores': 'Scores',
   'over.points': '{n} points',
   'over.hidden': 'includes {n} hidden victory point cards',
@@ -256,6 +257,7 @@ export const en = {
   'devCardDesc.victoryPoint': 'A hidden point. It is not played; it counts when the game ends or when you win.',
   'mode.standard': 'Standard (10 points)',
   'mode.short': 'Short (7 points)',
+  'mode.custom': 'Custom',
   'phase.setup': 'Setup',
   'phase.roll': 'Roll',
   'phase.discard': 'Discard',
@@ -265,6 +267,7 @@ export const en = {
   'phase.main': 'Turn',
   'phase.finished': 'Finished',
   'list.none': 'nothing',
+  'list.andLast': '{rest} and {last}',
   'list.and': ' and ',
 
   /* ---------- roles ---------- */
@@ -316,6 +319,8 @@ export const en = {
   'event.turnEnded': '{player} ended their turn.',
   'event.turnStarted': 'It is {player}\'s turn (turn {turn}).',
   'event.gameWon': '{player} won ({points} points)!',
+  'event.gameWon.tie': '{players} won together ({points} points each)!',
+  'event.turnTimedOut': '{player} ran out of time; the turn ended automatically.',
 
   /* ---------- game core errors ---------- */
   'error.gameOver': 'The game is over. Wait for the host to return to the lobby for a new game.',
@@ -371,6 +376,8 @@ export const en = {
   'error.invalidSetup': 'The game could not be set up.',
   'error.invalidSetup.playerCount': 'A game needs 2 to 5 players.',
   'error.invalidSetup.mode': 'The game mode is not valid.',
+  'error.invalidSetup.targetScore': 'The target score must be a whole number from 5 to 15, and only in a custom game.',
+  'error.invalidSetup.timer': 'The time limits are not valid.',
   'error.invalidSetup.duplicateId': 'A player was added twice. Refresh the lobby and try again.',
   'error.invalidSetup.badId': 'A player\'s identity is not valid. Refresh the lobby and try again.',
   'error.invalidSetup.unknownRole': 'A player\'s role is not valid. Pick roles again and retry.',

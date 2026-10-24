@@ -7,7 +7,7 @@ export type Resource = (typeof RESOURCES)[number];
 export type Hand = Record<Resource, number>;
 export type TileKind = Resource | 'desert';
 export type PieceKind = 'road' | 'settlement' | 'city';
-export type GameMode = 'standard' | 'short';
+export type GameMode = 'standard' | 'short' | 'custom';
 
 /** Role ids are plain strings: the role list is data (see roles/defs.ts). */
 export type RoleId = string;
@@ -64,9 +64,22 @@ export interface TradeOffer {
   want: Hand;
 }
 
+/** Time limits of a timed game, in seconds. `null` on the state means the game is untimed. */
+export interface TimerConfig {
+  turnSeconds: number;
+  gameSeconds: number;
+}
+
 export interface GameState {
   mode: GameMode;
+  /** points needed to win: fixed by the mode, or chosen (5-15) in a custom game */
   vpToWin: number;
+  /** the timed mode's limits; null while the game is untimed (the default) */
+  timer: TimerConfig | null;
+  /** server time (ms) the game was created; null when untimed. Only ever set from the `now` the caller passes in. */
+  gameStartedAt: number | null;
+  /** server time (ms) the current turn began; null until the first turn (setup is not timed) and when untimed */
+  turnStartedAt: number | null;
   map: MapDef;
   /** index = tile id of `map.tiles` */
   tiles: Tile[];
@@ -100,5 +113,6 @@ export interface GameState {
   demolishShield: Record<string, number>;
   longestRoad: { holder: string | null; length: number };
   largestArmy: { holder: string | null; size: number };
-  winner: string | null;
+  /** empty while the game runs; one id for a win by points, several when a timed game ends level */
+  winners: string[];
 }

@@ -38,7 +38,10 @@ export type GameEvent =
   | { type: 'demolished'; player: string; from: string; kind: PieceKind; id: number; cost: Hand }
   | { type: 'turnEnded'; player: string }
   | { type: 'turnStarted'; player: string; turn: number }
-  | { type: 'gameWon'; player: string; points: number };
+  /** a player's turn ran out and was ended for them */
+  | { type: 'turnTimedOut'; player: string }
+  /** `players` has one id for a win by points, several when the time limit ended the game level; `points` is the winners' score */
+  | { type: 'gameWon'; players: string[]; points: number; reason: 'target' | 'time' };
 
 /** Every error type the core can return, as data: clients check their translations against this list. */
 /** Every event type the core can emit, as data. The type check below fails to compile if this list and the `GameEvent` union drift apart. */
@@ -70,6 +73,7 @@ export const GAME_EVENT_TYPES = [
   'demolished',
   'turnEnded',
   'turnStarted',
+  'turnTimedOut',
   'gameWon',
 ] as const satisfies readonly GameEvent['type'][];
 type MissingEventTypes = Exclude<GameEvent['type'], (typeof GAME_EVENT_TYPES)[number]>;

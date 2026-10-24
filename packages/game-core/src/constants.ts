@@ -21,14 +21,22 @@ export const DEV_DECK_COMPOSITION: Record<DevCardKind, number> = {
 };
 export const DEV_DECK_SIZE = 25;
 
+/** `custom` has no fixed target: its `vpToWin` here is only a display default; a custom game states its own (CUSTOM_TARGET_MIN..MAX). */
 export const MODES: Record<GameMode, { vpToWin: number }> = {
   standard: { vpToWin: 10 },
   short: { vpToWin: 7 },
+  custom: { vpToWin: 10 },
 };
+export const CUSTOM_TARGET_MIN = 5;
+export const CUSTOM_TARGET_MAX = 15;
+
+/** The choices the timed mode offers (GDD); the core accepts any positive limit, the server holds rooms to these lists. */
+export const TURN_SECONDS_OPTIONS = [60, 90, 120, 150, 180] as const;
+export const GAME_MINUTES_OPTIONS = [30, 60, 90] as const;
 
 /** Per-resource bank stock at the start of a game. */
 export function bankStockFor(mode: GameMode, playerCount: number): number {
-  if (mode === 'standard') return playerCount >= 5 ? 24 : 19;
+  if (mode === 'standard' || mode === 'custom') return playerCount >= 5 ? 24 : 19;
   return playerCount >= 5 ? 19 : 14;
 }
 

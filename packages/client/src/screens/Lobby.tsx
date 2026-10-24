@@ -157,7 +157,7 @@ export function Lobby({ lobby }: { lobby: LobbyView }) {
       <section className="card" aria-labelledby="mode-title">
         <h2 id="mode-title">{t('lobby.mode.title')}</h2>
         <div className="segmented" role="radiogroup" aria-labelledby="mode-title">
-          {(Object.keys(MODES) as GameMode[]).map((m) => (
+          {(['standard', 'short'] as GameMode[]).map((m) => (
             <button
               key={m}
               type="button"

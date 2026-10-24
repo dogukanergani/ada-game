@@ -19,12 +19,12 @@ describe('whole games over real sockets (short mode)', () => {
       const steps = await playOut(server, code, players, 1000 + n);
       const final = stateOf(server, code);
       expect(final.phase, `unfinished after ${steps} steps`).toBe('finished');
-      expect(final.winner).not.toBeNull();
+      expect(final.winners).toHaveLength(1);
 
       // everyone is told, and the finished game opens the hidden cards
       for (const p of players) {
         const upd = (await p.until('game:update', (u: any) => u.view.phase === 'finished')) as any;
-        expect(upd.view.winner).toBe(final.winner);
+        expect(upd.view.winners).toEqual(final.winners);
         expect(upd.events.some((e: any) => e.type === 'gameWon')).toBe(true);
         expect(upd.view.players.every((q: any) => q.hand !== null)).toBe(true);
         const lobby = await p.until('lobby:update', (l: any) => l.phase === 'finished');
@@ -32,7 +32,7 @@ describe('whole games over real sockets (short mode)', () => {
       }
 
       // the game is over: moves are refused, only the host may go back to the lobby
-      const loser = players.find((p) => p.playerId !== final.winner)!;
+      const loser = players.find((p) => !final.winners.includes(p.playerId))!;
       expect((await loser.emit('game:action', { type: 'endTurn' })).error.key).toBe('notInGame');
       expect((await players[1].emit('lobby:reset')).error.key).toBe('notHost');
       const mark = players[1].mark();
@@ -52,7 +52,7 @@ describe('whole games over real sockets (short mode)', () => {
     expect(await players[0].emit('lobby:start')).toEqual({ ok: true });
     const snap = await players[1].until('game:snapshot', () => true, mark);
     expect(snap.view.phase).toBe('setup');
-    expect(snap.view.winner).toBeNull();
+    expect(snap.view.winners).toEqual([]);
   }, 120_000);
 
   it('a player who drops mid-game and returns can finish the game', async () => {

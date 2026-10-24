@@ -1,4 +1,5 @@
 import type { GameView } from '@ada/game-core';
+import { nameList } from '../../i18n/format';
 import { hasKey, type MessageKey } from '../../i18n';
 import { useT } from '../../i18n/context';
 import { Sheet } from '../../ui/Sheet';
@@ -17,19 +18,21 @@ export function GameOverSheet({ view, isHost, onClose, onLobby, onLeave }: Props
   const rows = view.players
     .map((p) => ({ p, total: p.points + (p.hiddenPoints ?? 0) }))
     .sort((a, b) => b.total - a.total || a.p.seat - b.p.seat);
-  const winner = view.players.find((p) => p.id === view.winner);
+  const winners = view.players.filter((p) => view.winners.includes(p.id));
   const role = (id: string) => (hasKey(`role.${id}.name`) ? t(`role.${id}.name` as MessageKey) : t('role.unknown.name'));
   return (
     <Sheet title={t('over.title')} onClose={onClose}>
-      {winner && (
+      {winners.length > 0 && (
         <p className="winner" role="status">
-          {t('over.winner', { player: winner.name })}
+          {winners.length === 1
+            ? t('over.winner', { player: winners[0].name })
+            : t('over.tie', { players: nameList(t, winners.map((p) => p.name)) })}
         </p>
       )}
       <h3>{t('over.scores')}</h3>
       <ol className="score-list">
         {rows.map(({ p, total }) => (
-          <li key={p.id} data-winner={p.id === view.winner} data-player={p.id}>
+          <li key={p.id} data-winner={view.winners.includes(p.id)} data-player={p.id}>
             <span className="score-name">
               {p.name} <span className="field-hint">({role(p.role)})</span>
             </span>

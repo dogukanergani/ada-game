@@ -324,7 +324,7 @@ describe('victory point cards', () => {
     give(s, 'p0', hand({ lumber: 1 }));
     s = act(s, 'p0', { type: 'offerTrade', give: { lumber: 1 }, want: { ore: 1 } });
     expect(s.phase).toBe('finished');
-    expect(s.winner).toBe('p0');
+    expect(s.winners).toEqual(['p0']);
   });
 
   it('hidden cards of an opponent do not end the game on your turn, only on theirs', () => {
@@ -338,7 +338,7 @@ describe('victory point cards', () => {
     expect(s.phase).toBe('main');
     s = act(s, 'p0', { type: 'endTurn' });
     expect(s.phase).toBe('finished');
-    expect(s.winner).toBe('p1');
+    expect(s.winners).toEqual(['p1']);
   });
 
   it('buying the deciding card wins immediately', () => {
@@ -348,7 +348,7 @@ describe('victory point cards', () => {
     stackDeck(s, 'victoryPoint');
     give(s, 'p0', hand({ wool: 1, grain: 1, ore: 1 }));
     s = act(s, 'p0', { type: 'buyDevCard' });
-    expect(s.winner).toBe('p0');
+    expect(s.winners).toEqual(['p0']);
   });
 
   it('victory point cards are never playable', () => {

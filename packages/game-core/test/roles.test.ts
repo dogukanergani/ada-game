@@ -479,7 +479,7 @@ describe('soldier: demolish', () => {
       expect(r.events).toContainEqual({ type: 'longestRoadChanged', holder: 'p0', length: 5 });
       expect(r.state.longestRoad.holder).toBe('p0');
       expect(r.state.phase).toBe('finished');
-      expect(r.state.winner).toBe('p0');
+      expect(r.state.winners).toEqual(['p0']);
     });
 
     it('demolishing a building that cut a third player\'s road gives that player the longest road', () => {
@@ -505,7 +505,7 @@ describe('soldier: demolish', () => {
       s.vpToWin = 1;
       s = act(s, 'p0', demolish('city', spread[2]));
       expect(s.phase).toBe('main');
-      expect(s.winner).toBeNull();
+      expect(s.winners).toEqual([]);
     });
   });
 });
