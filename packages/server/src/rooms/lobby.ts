@@ -195,7 +195,7 @@ export function reset(room: Room, playerId: string): Done {
   return OK;
 }
 
-export function lobbyViewFor(room: Room, me: string): LobbyView {
+export function lobbyViewFor(room: Room, me: string, choices: TimerChoices = defaultTimerChoices()): LobbyView {
   return {
     code: room.code,
     me,
@@ -203,6 +203,7 @@ export function lobbyViewFor(room: Room, me: string): LobbyView {
     mode: room.mode,
     targetScore: room.targetScore,
     timer: room.timer,
+    timerChoices: { turnSeconds: [...choices.turnSeconds], gameSeconds: [...choices.gameSeconds] },
     phase: room.phase,
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,

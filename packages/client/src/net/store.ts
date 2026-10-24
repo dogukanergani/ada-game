@@ -51,6 +51,8 @@ export interface AppState {
   lastRoll: RollRecord | null;
   /** the game's running time as the server last told it, with the monotonic moment (`performance.now()`) it arrived at */
   clock: { elapsedMs: number; running: boolean; at: number } | null;
+  /** the timed mode's time left as the server last told it, with the moment it arrived; null for an untimed or finished game */
+  timerClock: { turnRemainingMs: number | null; gameRemainingMs: number; at: number } | null;
 }
 
 export const initialState: AppState = {
@@ -65,6 +67,7 @@ export const initialState: AppState = {
   rev: 0,
   lastRoll: null,
   clock: null,
+  timerClock: null,
 };
 
 export type Msg =
@@ -87,7 +90,7 @@ export function reducer(s: AppState, m: Msg): AppState {
       return { ...s, playerId: m.playerId };
     case 'lobby':
       // a lobby view means no game is running (or it is finished and the lobby is shown beside it)
-      return m.lobby.phase === 'lobby' ? { ...s, lobby: m.lobby, game: null, log: [], lastRoll: null, clock: null } : { ...s, lobby: m.lobby };
+      return m.lobby.phase === 'lobby' ? { ...s, lobby: m.lobby, game: null, log: [], lastRoll: null, clock: null, timerClock: null } : { ...s, lobby: m.lobby };
     case 'game': {
       const entries = m.payload.events.map((event, i) => ({ id: s.nextId + i, event }));
       const rolled = m.kind === 'update' ? entries.find((e) => e.event.type === 'diceRolled') : undefined;
@@ -97,6 +100,7 @@ export function reducer(s: AppState, m: Msg): AppState {
         lastRoll: rolled ? rollRecord(s.lastRoll?.seq ?? 0, rolled, entries) : s.lastRoll,
         game: { view: m.payload.view, legal: m.payload.legal },
         clock: m.payload.clock ? { ...m.payload.clock, at: m.at ?? 0 } : s.clock,
+        timerClock: m.payload.timerClock ? { ...m.payload.timerClock, at: m.at ?? 0 } : null,
         log: [...s.log, ...entries].slice(-LOG_LIMIT),
         nextId: s.nextId + entries.length,
       };
@@ -106,7 +110,7 @@ export function reducer(s: AppState, m: Msg): AppState {
     case 'error':
       return { ...s, notice: { id: s.nextId, kind: 'error', error: m.error }, nextId: s.nextId + 1 };
     case 'leftRoom':
-      return { ...s, lobby: null, game: null, log: [], lastRoll: null, clock: null };
+      return { ...s, lobby: null, game: null, log: [], lastRoll: null, clock: null, timerClock: null };
     case 'dismiss':
       return { ...s, notice: null };
   }

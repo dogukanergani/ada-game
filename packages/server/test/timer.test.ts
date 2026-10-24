@@ -51,6 +51,8 @@ describe('choosing the mode and the timer in the lobby', () => {
     const { code } = await host.emit('room:create', { name: 'H' });
     const lobby = await host.until('lobby:update');
     expect(lobby).toMatchObject({ code, mode: 'standard', targetScore: 10, timer: null });
+    // the lists of the rules, in seconds: the client offers exactly these
+    expect(lobby.timerChoices).toEqual({ turnSeconds: [60, 90, 120, 150, 180], gameSeconds: [1800, 3600, 5400] });
   });
 
   it('takes a custom target from 5 to 15 only with the custom mode, and only from the host', async () => {

@@ -95,7 +95,7 @@ export function createAdaServer(opts: AdaServerOptions) {
     });
 
   function pushLobby(room: Room) {
-    for (const { pid, sock } of connectedSockets(room)) sock.emit('lobby:update', lobbyViewFor(room, pid));
+    for (const { pid, sock } of connectedSockets(room)) sock.emit('lobby:update', lobbyViewFor(room, pid, timerChoices));
   }
 
   /** Each player gets their own view and the events as they may see them; nobody else's. */

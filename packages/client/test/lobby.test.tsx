@@ -26,6 +26,7 @@ const view = (over: Partial<LobbyView> = {}, players: Partial<LobbyView['players
   mode: 'standard',
   targetScore: 10,
   timer: null,
+  timerChoices: { turnSeconds: [60, 90, 120, 150, 180], gameSeconds: [1800, 3600, 5400] },
   phase: 'lobby',
   minPlayers: 2,
   maxPlayers: 5,

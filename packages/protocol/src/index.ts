@@ -83,6 +83,8 @@ export interface LobbyView {
   targetScore: number;
   /** the timed mode's limits; null = no timer (the default) */
   timer: TimerConfig | null;
+  /** the limits the host may pick, in seconds: the lists of the rules (a test server may add values) */
+  timerChoices: { turnSeconds: number[]; gameSeconds: number[] };
   phase: RoomPhase;
   minPlayers: number;
   maxPlayers: number;

@@ -1922,3 +1922,155 @@ legend {
   margin: 0;
   font-weight: 600;
 }
+
+/* ---------- target picker and timer settings in the lobby ---------- */
+.target-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.target-picker .field-label {
+  flex: 1 1 auto;
+}
+.target-value {
+  min-width: 5.5em;
+  text-align: center;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.timer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.timer-head h2 {
+  margin: 0;
+}
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.switch:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+.switch-knob {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--shallows);
+  position: relative;
+  flex: none;
+}
+.switch-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.15s;
+}
+.switch[aria-checked='true'] .switch-knob {
+  background: var(--accent);
+}
+.switch[aria-checked='true'] .switch-knob::after {
+  transform: translateX(14px);
+  background: #1d1300;
+}
+.switch-text {
+  font-weight: 700;
+  min-width: 3.2em;
+  text-align: left;
+}
+[data-limit] {
+  flex-wrap: wrap;
+}
+[data-limit] .segment {
+  min-width: 4.2em;
+}
+
+/* ---------- the timed mode's countdowns in the game's top row ---------- */
+.game-top {
+  flex-wrap: wrap;
+}
+.timer-bar {
+  flex: 1 0 100%;
+  order: 9;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'turn game' 'bar bar';
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 2px 2px 4px;
+  font-size: 14px;
+}
+.timer-turn {
+  grid-area: turn;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.timer-value {
+  font-size: 18px;
+}
+.timer-name {
+  color: var(--muted);
+}
+.timer-game {
+  grid-area: game;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.timer-progress {
+  grid-area: bar;
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--shallows);
+  overflow: hidden;
+}
+.timer-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.timer-bar[data-mine='true'] .timer-value {
+  color: var(--accent);
+}
+.timer-bar[data-urgent='true'] .timer-turn {
+  color: var(--danger);
+}
+.timer-bar[data-urgent='true'] .timer-value {
+  color: var(--danger);
+  animation: timer-pulse 1s steps(2, jump-none) infinite;
+}
+.timer-hurry {
+  font-weight: 800;
+}
+@keyframes timer-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-bar[data-urgent='true'] .timer-value {
+    animation: none;
+  }
+}

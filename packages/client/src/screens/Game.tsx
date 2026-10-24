@@ -11,6 +11,7 @@ import { ActionDock, type SheetName } from '../ui/ActionDock';
 import { DiceTray } from '../ui/DiceTray';
 import { DemolishPanel, type PreviewState } from '../ui/DemolishPanel';
 import { GameClock } from '../ui/GameClock';
+import { TimerBar } from '../ui/TimerBar';
 import { HeaderButtons } from '../ui/HeaderButtons';
 import { HandBar } from '../ui/HandBar';
 import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
@@ -19,7 +20,7 @@ import { LastEvent } from '../ui/LastEvent';
 import { Seats } from '../ui/Seats';
 import { CostsSheet, DiscardSheet, LogSheet, StealSheet } from './sheets/InfoSheets';
 import { DevCardsSheet } from './sheets/DevCardsSheet';
-import { GameOverSheet } from './sheets/GameOverSheet';
+import { GameOverSheet, endedByTime } from './sheets/GameOverSheet';
 import { TradeSheet } from './sheets/TradeSheet';
 
 /** px at the top of the board that stay free for the dice resting in the corner */
@@ -141,6 +142,7 @@ export function GameScreen() {
         <LastEvent view={view} log={shownLog} connected={connected} rolling={roll.rolling} />
         <GameClock clock={state.clock} />
         <HeaderButtons locked={controls.forced !== null} vpToWin={view.vpToWin} />
+        <TimerBar view={view} clock={state.timerClock} />
       </header>
 
       <div className="game-table" data-players={view.players.length}>
@@ -211,6 +213,7 @@ export function GameScreen() {
       {view.phase === 'finished' && overOpen && (
         <GameOverSheet
           view={view}
+          byTime={endedByTime(view, state.log)}
           isHost={isHost}
           onClose={() => setOverOpen(false)}
           onLobby={() => void api.request('lobby:reset')}
