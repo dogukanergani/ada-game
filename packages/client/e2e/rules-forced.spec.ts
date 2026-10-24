@@ -1,6 +1,20 @@
 import { expect, test } from './test';
 import { doForced, mover, newTable, playSetup, startShort, type Seat } from './table';
 
+/** What every player's screen shows: phase, the hint line, the buttons and the open dialogs. For a failure message. */
+async function stuckInfo(seats: Seat[], turn: number): Promise<string> {
+  const lines = await Promise.all(
+    seats.map(async (s) => {
+      const phase = await s.page.locator('.game').getAttribute('data-phase').catch(() => '?');
+      const hint = await s.page.locator('p.hint').first().innerText().catch(() => '?');
+      const actions = await s.page.locator('[data-action]').evaluateAll((e) => e.map((x) => `${x.getAttribute('data-action')}${x.getAttribute('aria-disabled') === 'true' ? '(off)' : ''}`)).catch(() => []);
+      const dialogs = await s.page.getByRole('dialog').evaluateAll((e) => e.map((x) => x.getAttribute('aria-label') ?? x.textContent?.slice(0, 30))).catch(() => []);
+      return `${s.name}: phase=${phase} hint="${hint}" actions=${actions.join(',')} dialogs=${dialogs.join('|')}`;
+    }),
+  );
+  return `turn ${turn}, "end" is not on: ${lines.join(' || ')}`;
+}
+
 /**
  * Settings and the rules never cover a sheet the game forces open. Every player holds 24 cards on this server,
  * so any 7 makes everyone discard; the test plays turns until one comes.
@@ -14,6 +28,13 @@ test('while a discard is due the gear and the "?" are off and open nothing; a ru
   for (let turn = 0; turn < 60 && !due; turn++) {
     const roller = await mover(seats);
     if ((await roller.action('roll').count()) === 0) {
+      // a turn that is not at the dice must be at "end"; if that button does not come on, say what the screen holds
+      // instead of waiting out the test's whole timeout (this step hung in two full runs of this server's specs)
+      try {
+        await expect.poll(() => roller.can('end'), { timeout: 10_000 }).toBe(true);
+      } catch {
+        throw new Error(await stuckInfo(seats, turn));
+      }
       await roller.action('end').click();
       continue;
     }
