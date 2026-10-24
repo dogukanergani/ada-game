@@ -28,8 +28,8 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /rules-forced\.spec|timer\.spec|finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
-    { name: 'timed', testMatch: /timer\.spec/, use: { baseURL: `http://localhost:${TIMED}` } },
+    { name: 'play', testIgnore: /rules-forced\.spec|timer(-shots)?\.spec|finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'timed', testMatch: /timer(-shots)?\.spec/, use: { baseURL: `http://localhost:${TIMED}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
     { name: 'demolish', testMatch: /demolish\.spec/, use: { baseURL: `http://localhost:${DEMOLISH}` } },
     { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec|seats\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },

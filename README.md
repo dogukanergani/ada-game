@@ -7,7 +7,7 @@ A turn-based, room-code multiplayer island-building game for 2–5 players, insp
 ## Highlights
 
 - **Authoritative server with a secret-information filter.** Clients send actions; the server validates and applies them. A client only ever receives `viewFor(state, playerId)`: opponents' hands, the development-card deck contents and its order never leave the server, only counts do. Events are redacted per recipient the same way.
-- **Pure TypeScript rules engine.** `applyAction(state, playerId, action, rng) → {ok, state, events} | {ok: false, error}`. No network, files, clock or `Math.random` inside; state is plain JSON; randomness comes only from the injected `rng`.
+- **Pure TypeScript rules engine.** `applyAction(state, playerId, action, rng, now?) → {ok, state, events} | {ok: false, error}`. No network, files, clock or `Math.random` inside (the timed mode's time comes in as the `now` parameter); state is plain JSON; randomness comes only from the injected `rng`.
 - **The core produces events, not text.** Events and errors are `{type, ...values}`; the client translates them (Turkish and English, same keys enforced by tests).
 - **One validator for rules and UI.** The functions that validate a move are the same ones that list legal moves for highlighting, so the board can't show something the server will reject.
 - **Fuzz testing with invariants.** Bots play hundreds of games with legal moves and every step is checked: no negative resources, conserved bank + hand totals, a 25-card development deck, piece limits, the distance rule, longest-road ownership, and scores recomputed from structures.
@@ -17,6 +17,7 @@ A turn-based, room-code multiplayer island-building game for 2–5 players, insp
 - **Single-process deployment.** One Node process serves the Socket.IO game server and the built client on the same port.
 - **Entry screen, Settings and How to play.** A gear (language, "forget this device's identity") and a read-only rules sheet are reachable from the home screen, the lobby and the game; the rules take no game state, so they cannot change a game or show a rival's hand, and they stay off while the game forces a sheet open (discarding, choosing a victim).
 - **The game clock is the server's.** Each game payload carries the elapsed time worked out on the server (`clock`); the client only counts on from the moment it arrived, so a refresh or a wrong device clock cannot change it.
+- **Custom target and timed mode.** Standard (10), short (7) or custom (5-15 points; map and bank follow the player count), with an optional turn limit (60-180 s) and game limit (30-90 min). The server drives `tickTimers(state, rng, now)` from one interval and an injectable clock; a turn that runs out ends by itself, a game that runs out is won by everyone on the top score (`winners` is a list). Off by default, and then nothing changes.
 - **Maps are data.** Three layouts (19, 30 and 14 tiles) are `MapDef` values, validated by `validateMap`; adding a map means adding data.
 
 ## Architecture
@@ -65,7 +66,7 @@ npm run start           # http://localhost:3001
 | End to end | Playwright, two mobile contexts, seeded test servers: lobby, setup, dice, trade, a full short game, the Soldier's demolition, reconnection | `packages/client/e2e` |
 | Balance report | Role win rates from random and greedy bots across player counts and modes (a report, not a pass/fail test) | `packages/game-core/scripts/balance.ts` |
 
-Current counts from `npm test`: **143** client + **164** game-core + **96** server = **403** unit/integration tests passing. `npm run e2e` runs **105** Playwright scenarios.
+Current counts from `npm test`: **188** client + **185** game-core + **114** server = **487** unit/integration tests passing. `npm run e2e` runs **121** Playwright scenarios.
 
 ```bash
 npm test             # all unit, fuzz, leak and server tests
@@ -77,21 +78,21 @@ npm run balance      # npm run balance -- --games=300 --seed=2
                      # npm run balance -- --costs="settlement=ore:2,wool:1/city=ore:3,wool:2,grain:2"
 ```
 
-The end-to-end servers use test-only switches (`ADA_TEST_SEED`, `ADA_TEST_VP`, `ADA_TEST_RESOURCES`, `ADA_TEST_CREATE_LIMIT`). They are read only when `NODE_ENV` is exactly `test`; a server test proves each is ignored anywhere else.
+The end-to-end servers use test-only switches (`ADA_TEST_SEED`, `ADA_TEST_VP`, `ADA_TEST_RESOURCES`, `ADA_TEST_CREATE_LIMIT`, `ADA_TEST_TURN_SECONDS`, `ADA_TEST_GAME_SECONDS`). They are read only when `NODE_ENV` is exactly `test`; a server test proves each is ignored anywhere else.
 
 ## Status and roadmap
 
-**Works today:** lobby with room codes, role selection, standard (10 points) and short (7 points) modes, three maps, the full turn cycle with bank/port/player trading (a side-by-side give/get sheet), development cards, robber, longest road and largest army, five roles (the Soldier pays resources to demolish a rival's road, settlement or city), player seats round the board with points and card counts (never which cards), reconnection after refresh or dropped connection, Turkish and English.
+**Works today:** lobby with room codes, role selection, standard (10 points), short (7 points) and custom (5-15 points) modes, an optional timed mode, three maps, the full turn cycle with bank/port/player trading (a side-by-side give/get sheet), development cards, robber, longest road and largest army, five roles (the Soldier pays resources to demolish a rival's road, settlement or city), player seats round the board with points and card counts (never which cards), reconnection after refresh or dropped connection, Turkish and English.
 
 **Known gaps:**
 
 - Role balance is not settled: in bot simulations one role wins above its even share and another below it; real playtesting comes first. The Soldier's demolition price was tuned against two bots (about −2.5 points from an even share with the greedy bot, −6 with the random bot). A known long-game case, where the Soldier grinds a rival down to one building and the game drags on, has a proposed guard that is **not** implemented. Details are in [docs/DECISIONS.md](docs/DECISIONS.md).
 - On a 360×640 phone the board is small in the Soldier's demolish mode (the preview panel takes room); pinch to zoom.
 - The 30-tile and 14-tile layouts and short mode with five players are assumptions not yet validated by human play.
-- Rooms are in memory only; no turn timer, accounts, matchmaking, spectators or chat.
+- Rooms are in memory only; no accounts, matchmaking, spectators or chat.
 - Rate-limit values and longest-road cost under load have not been measured.
 
-**Next:** playtesting and rebalancing, persistent rooms, turn timers, accounts and matchmaking, and wrapping the same web code with Capacitor for iOS and Android (planned, not started).
+**Next:** playtesting and rebalancing, persistent rooms, accounts and matchmaking, and wrapping the same web code with Capacitor for iOS and Android (planned, not started).
 
 Design document: [docs/GDD.md](docs/GDD.md) (in Turkish). Decisions and assumptions log: [docs/DECISIONS.md](docs/DECISIONS.md).
 
