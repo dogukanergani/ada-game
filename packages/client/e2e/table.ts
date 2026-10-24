@@ -19,7 +19,9 @@ export class Seat {
   /** true when the action button exists and is not marked disabled */
   async can(id: string): Promise<boolean> {
     const b = this.action(id);
-    return (await b.count()) > 0 && (await b.first().getAttribute('aria-disabled')) !== 'true';
+    if ((await b.count()) === 0) return false;
+    // a button that goes away between the count and the read (the screen was updated) is simply not there any more
+    return b.first().getAttribute('aria-disabled', { timeout: 1000 }).then((v) => v !== 'true', () => false);
   }
 
   async hand(): Promise<Record<string, number>> {
@@ -112,6 +114,9 @@ export async function doForced(seat: Seat): Promise<boolean> {
       throw new Error(`the discard sheet never reached its count: ${shown.replace(/\s+/g, ' ')}`);
     }
     await seat.action('discard').click();
+    // the button stays on screen until the server's answer arrives; a caller that looks again at once would find a stale
+    // button, so say "done" only when it is gone
+    await expect(seat.action('discard')).toHaveCount(0, { timeout: 10_000 });
     return true;
   }
   // choose whom to steal from
@@ -145,7 +150,17 @@ export async function playSetup(seats: Seat[]) {
 /** The seat whose turn it is (it has a roll or an end-turn button). */
 export async function mover(seats: Seat[]): Promise<Seat> {
   for (let i = 0; i < 100; i++) {
-    for (const s of seats) if ((await s.action('roll').count()) > 0 || (await s.action('end').count()) > 0) return s;
+    // Every screen must agree on whose turn it is, and the one holding the dice or the "end" button must be that player's own.
+    // A screen that has not yet applied the last turn change still shows its old "end" button and its old turn marker together,
+    // so one page's own marker cannot tell stale from current; the others, already updated, name someone else.
+    const turns = await Promise.all(seats.map((s) => s.page.locator('.pseat[data-turn="true"]').first().getAttribute('data-player').catch(() => null)));
+    const agreed = turns[0] !== null && turns.every((t) => t === turns[0]);
+    if (agreed) {
+      for (const s of seats) {
+        const mine = await s.page.locator(`.pseat[data-me="true"][data-player="${turns[0]}"]`).count();
+        if (mine > 0 && ((await s.action('roll').count()) > 0 || (await s.action('end').count()) > 0)) return s;
+      }
+    }
     await seats[0].page.waitForTimeout(100);
   }
   const info = await Promise.all(seats.map(async (s) => `${s.name}: phase=${await s.page.locator('.game').getAttribute('data-phase').catch(() => '?')} hint=${await s.page.locator('p.hint').first().innerText().catch(() => '?')} actions=${(await s.page.locator('[data-action]').evaluateAll((e) => e.map((x) => x.getAttribute('data-action'))).catch(() => [])).join(',')}`));
