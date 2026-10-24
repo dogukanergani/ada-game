@@ -18,7 +18,7 @@ const roll = (over: Partial<RollRecord> = {}): RollRecord => ({
   seq: 1, dice: [3, 4], total: 7, hitTiles: [2], robbedTile: 9, logId: 5, gains: { a: { lumber: 1, brick: 0, wool: 0, grain: 0, ore: 0 } }, ...over,
 });
 const view = (dice: [number, number] | null = null) => ({ me: 'a', phase: 'main', dice }) as never;
-const payload = (events: GamePayload['events'], dice: [number, number] | null = [3, 4]): GamePayload => ({ view: view(dice), legal: { phase: 'main' } as never, events, clock: { elapsedMs: 0, running: true } });
+const payload = (events: GamePayload['events'], dice: [number, number] | null = [3, 4]): GamePayload => ({ view: view(dice), legal: { phase: 'main' } as never, events, clock: { elapsedMs: 0, running: true }, timerClock: null });
 const run = (msgs: Msg[], from: AppState = initialState) => msgs.reduce(reducer, from);
 const rolledEvents: GamePayload['events'] = [
   { type: 'diceRolled', player: 'a', dice: [3, 4], total: 7, hitTiles: [2], robbedTile: 9 },

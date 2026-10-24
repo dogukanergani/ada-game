@@ -34,7 +34,7 @@ function site() {
 describe('serving the built client', () => {
   it('serves files with the right types and caching, and falls back to index.html for app paths', async () => {
     const clientDir = site();
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null, testTurnSeconds: null, testGameSeconds: null } });
     const index = await get(url, '/');
     expect(index.status).toBe(200);
     expect(index.body).toContain('<title>ada</title>');
@@ -55,7 +55,7 @@ describe('serving the built client', () => {
 
   it('never leaves the client folder', async () => {
     const clientDir = site();
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null, testTurnSeconds: null, testGameSeconds: null } });
     for (const path of ['/../secret.txt', '/%2e%2e/secret.txt', '/..%2fsecret.txt', '/assets/../../secret.txt', '/%00', '/..\\secret.txt']) {
       const r = await get(url, path);
       expect(r.body, path).not.toContain('TOP SECRET');
@@ -64,7 +64,7 @@ describe('serving the built client', () => {
 
   it('leaves the socket path to socket.io, and a server with no client answers 404', async () => {
     const clientDir = site();
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir, testVp: null, testSeed: null, testResources: null, testCreateLimit: null, testTurnSeconds: null, testGameSeconds: null } });
     const c = await TestClient.login(url);
     expect(c.playerId).toBeTruthy();
     const none = await startServer();
@@ -89,7 +89,7 @@ describe('the test-only target score', () => {
 
   it('lowers the winning score of games the server starts, and a server without it uses the mode\'s', async () => {
     for (const [vp, expected] of [[3, 3], [null, 7]] as const) {
-      const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: vp, testSeed: null, testResources: null, testCreateLimit: null } });
+      const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: vp, testSeed: null, testResources: null, testCreateLimit: null, testTurnSeconds: null, testGameSeconds: null } });
       const a = await TestClient.login(url);
       const b = await TestClient.login(url);
       const { code } = await a.emit('room:create', { name: 'A' });
@@ -126,7 +126,7 @@ describe('the test-only starting cards', () => {
   });
 
   async function started(n: number, testResources: number) {
-    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources, testCreateLimit: null } });
+    const { url } = await startServer({ config: { port: 0, corsOrigins: [], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources, testCreateLimit: null, testTurnSeconds: null, testGameSeconds: null } });
     const players: TestClient[] = [];
     for (let i = 0; i < n; i++) players.push(await TestClient.login(url));
     const { code } = await players[0].emit('room:create', { name: 'P0' });

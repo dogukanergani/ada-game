@@ -138,7 +138,13 @@ export function assertNoLeak({ pid, event, payload, before, after, initialDeck }
     return;
   }
   // the game clock is public (server time elapsed): exactly two fields, a number and a flag, and nothing else rides along
-  expect(Object.keys(payload).sort()).toEqual(['clock', 'events', 'legal', 'view']);
+  // (the timed mode adds the time left on its clocks, also public: two numbers, or null when the game is untimed or over)
+  expect(Object.keys(payload).sort()).toEqual(['clock', 'events', 'legal', 'timerClock', 'view']);
+  if (payload.timerClock !== null) {
+    expect(Object.keys(payload.timerClock).sort()).toEqual(['gameRemainingMs', 'turnRemainingMs']);
+    expect(Number.isFinite(payload.timerClock.gameRemainingMs) && payload.timerClock.gameRemainingMs >= 0).toBe(true);
+    expect(payload.timerClock.turnRemainingMs === null || payload.timerClock.turnRemainingMs >= 0).toBe(true);
+  }
   expect(Object.keys(payload.clock).sort()).toEqual(['elapsedMs', 'running']);
   expect(Number.isFinite(payload.clock.elapsedMs) && payload.clock.elapsedMs >= 0 && typeof payload.clock.running === 'boolean').toBe(true);
   const view = payload.view;

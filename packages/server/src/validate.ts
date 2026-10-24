@@ -92,5 +92,18 @@ export const parseJoin = (x: unknown): Parsed<{ code: unknown; name: unknown }> 
   isPlain(x) && 'code' in x && 'name' in x ? good({ code: x.code, name: x.name }) : bad;
 export const parseRole = (x: unknown): Parsed<{ role: string | null }> =>
   isPlain(x) && (x.role === null || isShortString(x.role, 32)) ? good({ role: x.role as string | null }) : bad;
-export const parseMode = (x: unknown): Parsed<{ mode: GameMode }> =>
-  isPlain(x) && (x.mode === 'standard' || x.mode === 'short') ? good({ mode: x.mode }) : bad;
+export const parseMode = (x: unknown): Parsed<{ mode: GameMode; targetScore?: number }> => {
+  if (!isPlain(x) || !(x.mode === 'standard' || x.mode === 'short' || x.mode === 'custom')) return bad;
+  if (x.targetScore === undefined) return good({ mode: x.mode });
+  // the lobby decides whether the number is allowed; here it only has to be a number
+  return typeof x.targetScore === 'number' && Number.isFinite(x.targetScore) ? good({ mode: x.mode, targetScore: x.targetScore }) : bad;
+};
+
+/** `{timer: null}` or `{timer: {turnSeconds, gameSeconds}}` with whole numbers; whether the limits are on offer is the lobby's call. */
+export const parseTimer = (x: unknown): Parsed<{ timer: { turnSeconds: number; gameSeconds: number } | null }> => {
+  if (!isPlain(x) || !('timer' in x)) return bad;
+  if (x.timer === null) return good({ timer: null });
+  const t = x.timer;
+  if (!isPlain(t) || !isInt(t.turnSeconds, 1_000_000) || !isInt(t.gameSeconds, 1_000_000)) return bad;
+  return good({ timer: { turnSeconds: t.turnSeconds as number, gameSeconds: t.gameSeconds as number } });
+};

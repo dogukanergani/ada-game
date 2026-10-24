@@ -1,6 +1,6 @@
-import { legalMovesFor, type Action, type GameEvent, type GameMode, type LegalMoves, type Rng } from '@ada/game-core';
+import { legalMovesFor, type Action, type GameEvent, type GameMode, type LegalMoves, type Rng, type TimerConfig } from '@ada/game-core';
 import type { PreviewResult } from '@ada/protocol';
-import { playAction, previewAction, startGame } from './game/session';
+import { playAction, previewAction, startGame, tickGame } from './game/session';
 import { freshCode, parseCode } from './rooms/code';
 import * as lobby from './rooms/lobby';
 import { fail, seatOf, type Room } from './rooms/room';
@@ -23,7 +23,17 @@ export class RoomService {
     private readonly testVp: number | null = null,
     /** test only (see ServerConfig.testResources) */
     private readonly testResources: number | null = null,
+    /** the timer limits a host may pick; the rules' own lists unless a test server adds some */
+    private readonly timerChoices: lobby.TimerChoices = lobby.defaultTimerChoices(),
   ) {}
+
+  /** codes of the rooms whose timed game is running: the only rooms the clock has to look at */
+  private readonly timed = new Set<string>();
+
+  /** how many rooms the timer is watching (tests check it empties as games end and rooms close) */
+  timedRoomCount(): number {
+    return this.timed.size;
+  }
 
   get(code: string): Room | undefined {
     return this.store.get(code);
@@ -115,16 +125,22 @@ export class RoomService {
     return this.inRoom(playerId, (r) => lobby.setRole(r, playerId, role));
   }
 
-  setMode(playerId: string, mode: GameMode) {
-    return this.inRoom(playerId, (r) => lobby.setMode(r, playerId, mode));
+  setMode(playerId: string, mode: GameMode, targetScore?: number) {
+    return this.inRoom(playerId, (r) => lobby.setMode(r, playerId, mode, targetScore));
+  }
+
+  setTimer(playerId: string, timer: TimerConfig | null) {
+    return this.inRoom(playerId, (r) => lobby.setTimer(r, playerId, timer, this.timerChoices));
   }
 
   start(playerId: string) {
     return this.inRoom(playerId, (r) => {
-      const res = startGame(r, playerId, this.rng, this.testVp, this.testResources);
+      const at = this.now();
+      const res = startGame(r, playerId, this.rng, at, this.testVp, this.testResources);
       if (res.ok) {
-        r.startedAt = this.now();
+        r.startedAt = at;
         r.endedAt = null;
+        if (r.game?.timer) this.timed.add(r.code);
       }
       return res;
     });
@@ -138,11 +154,40 @@ export class RoomService {
     const room = this.activeRoom(playerId);
     if (!room) return fail('notInRoom');
     const res = this.mutate(room.code, (r) => {
-      const done = playAction(r, playerId, action, this.rng);
-      if (done.ok && r.phase === 'finished' && r.endedAt === null) r.endedAt = this.now();
+      const done = playAction(r, playerId, action, this.rng, this.now());
+      if (done.ok && r.phase === 'finished') this.markOver(r);
       return done;
     });
     return res.ok ? { ok: true, code: room.code, events: res.events } : res;
+  }
+
+  /** A game just ended: stop its clock and the timer's watch over the room. */
+  private markOver(room: Room) {
+    if (room.endedAt === null) room.endedAt = this.now();
+    this.timed.delete(room.code);
+  }
+
+  /**
+   * Looks at every timed game that is running and lets the ones whose time is up move on: a turn that ran out is ended for its
+   * player, a game that ran out is finished. Returns what happened, room by room, for the socket layer to push. The time is the
+   * service's own clock (injected in tests), never the sockets'.
+   */
+  tickTimers(): { code: string; events: GameEvent[] }[] {
+    const changed: { code: string; events: GameEvent[] }[] = [];
+    for (const code of [...this.timed]) {
+      const room = this.store.get(code);
+      if (!room || room.phase !== 'playing' || !room.game?.timer) {
+        this.timed.delete(code);
+        continue;
+      }
+      const res = this.mutate(code, (r) => {
+        const done = tickGame(r, this.rng, this.now());
+        if (done.ok && r.phase === 'finished') this.markOver(r);
+        return done;
+      });
+      if (res.ok && res.events.length) changed.push({ code, events: res.events });
+    }
+    return changed;
   }
 
   preview(playerId: string, action: Action): Out<{ preview: PreviewResult }> {
@@ -159,6 +204,8 @@ export class RoomService {
   }
 
   sweep(maxIdleMs: number): string[] {
-    return this.store.sweep(this.now(), maxIdleMs);
+    const gone = this.store.sweep(this.now(), maxIdleMs);
+    for (const code of gone) this.timed.delete(code);
+    return gone;
   }
 }

@@ -406,7 +406,9 @@ export const tr = {
   'server.roleTaken': 'Bu rolü başka bir oyuncu seçti. Başka bir rol seç.',
   'server.unknownRole': 'Bu rol yok. Listeden bir rol seç.',
   'server.badName': 'İsim 1 ile 24 karakter arasında olmalı.',
-  'server.badMode': 'Oyun modu geçersiz. Standart ya da kısa seç.',
+  'server.badMode': 'Oyun modu geçersiz. Standart, kısa ya da özel seç.',
+  'server.badTarget': 'Hedef puan 5 ile 15 arasında bir tam sayı olmalı ve yalnızca Özel modla birlikte verilir.',
+  'server.badTimer': 'Bu süre sınırları seçilemez.',
   'server.needMorePlayers': 'Başlatmak için en az 2 bağlı oyuncu gerekir.',
   'server.game': 'Hamle kabul edilmedi.',
 

@@ -403,7 +403,9 @@ export const en = {
   'server.roleTaken': 'Another player picked that role. Choose a different one.',
   'server.unknownRole': 'There is no such role. Pick one from the list.',
   'server.badName': 'The name must be 1 to 24 characters.',
-  'server.badMode': 'The game mode is not valid. Choose standard or short.',
+  'server.badMode': 'The game mode is not valid. Choose standard, short or custom.',
+  'server.badTarget': 'The target score must be a whole number from 5 to 15, and only goes with the custom mode.',
+  'server.badTimer': 'These time limits are not on offer.',
   'server.needMorePlayers': 'You need at least 2 connected players to start.',
   'server.game': 'The move was not accepted.',
 

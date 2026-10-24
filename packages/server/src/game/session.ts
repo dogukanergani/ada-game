@@ -1,5 +1,5 @@
 import {
-  RESOURCES, applyAction, createGame, dealTestHands, eventsFor, longestRoadFor, publicPoints, roleOf, validate,
+  RESOURCES, applyAction, createGame, tickTimers, dealTestHands, eventsFor, longestRoadFor, publicPoints, roleOf, validate,
   type Action, type GameEvent, type GameMode, type Hand, type Rng,
 } from '@ada/game-core';
 import type { PreviewResult } from '@ada/protocol';
@@ -13,10 +13,19 @@ import { commitStart, planStart } from '../rooms/lobby';
 type Done = { ok: true; events: GameEvent[] } | ReturnType<typeof fail>;
 
 /** Starts the game of a lobby; only the host may. */
-export function startGame(room: Room, playerId: string, rng: Rng, testVp: number | null = null, testResources: number | null = null): Done {
+export function startGame(room: Room, playerId: string, rng: Rng, now: number, testVp: number | null = null, testResources: number | null = null): Done {
   const plan = planStart(room, playerId, rng);
   if (!plan.ok) return plan;
-  const created = createGame({ players: plan.players, mode: room.mode as GameMode }, rng);
+  const created = createGame(
+    {
+      players: plan.players,
+      mode: room.mode as GameMode,
+      ...(room.mode === 'custom' ? { targetScore: room.targetScore } : {}),
+      timer: room.timer,
+    },
+    rng,
+    now,
+  );
   if (!created.ok) return fail('game', { error: created.error });
   if (testVp !== null) created.state.vpToWin = testVp;
   if (testResources !== null) dealTestHands(created.state, testResources);
@@ -26,11 +35,24 @@ export function startGame(room: Room, playerId: string, rng: Rng, testVp: number
 }
 
 /** Runs one player's action on the room's game. */
-export function playAction(room: Room, playerId: string, action: Action, rng: Rng): Done {
+export function playAction(room: Room, playerId: string, action: Action, rng: Rng, now: number): Done {
   const seat = seatOf(room, playerId);
   if (!seat || !isActive(seat)) return fail('notInRoom');
   if (room.phase !== 'playing' || !room.game) return fail('notInGame');
-  const result = applyAction(room.game, playerId, action, rng);
+  const result = applyAction(room.game, playerId, action, rng, now);
+  if (!result.ok) return fail('game', { error: result.error });
+  room.game = result.state;
+  if (result.state.phase === 'finished') room.phase = 'finished';
+  return { ok: true, events: result.events };
+}
+
+/**
+ * Asks a timed game whether a limit has run out (see `tickTimers`). Returns the events when something happened: a turn ended on its
+ * own or the game ended. An untimed room, or one not playing, is left alone.
+ */
+export function tickGame(room: Room, rng: Rng, now: number): Done {
+  if (room.phase !== 'playing' || !room.game?.timer) return { ok: true, events: [] };
+  const result = tickTimers(room.game, rng, now);
   if (!result.ok) return fail('game', { error: result.error });
   room.game = result.state;
   if (result.state.phase === 'finished') room.phase = 'finished';

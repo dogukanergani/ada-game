@@ -15,7 +15,7 @@ afterEach(async () => {
 
 export async function startServer(opts: Partial<AdaServerOptions> = {}): Promise<{ server: Server; url: string }> {
   const server = createAdaServer({
-    config: { port: 0, corsOrigins: ['*'], secret: 'test-secret', clientDir: null, testVp: null, testSeed: null, testResources: null, testCreateLimit: null },
+    config: { port: 0, corsOrigins: ['*'], secret: 'test-secret', clientDir: null, testVp: null, testSeed: null, testResources: null, testCreateLimit: null, testTurnSeconds: null, testGameSeconds: null },
     // generous by default; the tests about limits ask for small ones
     rateLimit: { capacity: 10_000, perSecond: 10_000 },
     createLimit: { capacity: 10_000, perSecond: 10_000 },

@@ -1,4 +1,7 @@
-import { MAX_PLAYERS, MIN_PLAYERS, ROLE_LIST, isRoleId, type GameMode, type Rng, type RoleId } from '@ada/game-core';
+import {
+  CUSTOM_TARGET_MAX, CUSTOM_TARGET_MIN, GAME_MINUTES_OPTIONS, MAX_PLAYERS, MIN_PLAYERS, ROLE_LIST, TURN_SECONDS_OPTIONS, isRoleId,
+  type GameMode, type Rng, type RoleId, type TimerConfig,
+} from '@ada/game-core';
 import { NAME_MAX_LENGTH, type LobbyView } from '@ada/protocol';
 import { fail, isActive, seatOf, type Room } from './room';
 
@@ -18,6 +21,8 @@ export function newRoom(code: string, hostId: string, name: string): Room {
     code,
     hostId,
     mode: 'standard',
+    targetScore: 10,
+    timer: null,
     phase: 'lobby',
     seats: [{ playerId: hostId, name, role: null, connected: true, away: false }],
     game: null,
@@ -112,12 +117,38 @@ function hostOnly(room: Room, playerId: string): Done {
   return room.hostId === playerId ? OK : fail('notHost');
 }
 
-export function setMode(room: Room, playerId: string, mode: GameMode): Done {
+/** `targetScore` belongs to the custom mode only: required there (an integer from 5 to 15), refused with any other mode. */
+export function setMode(room: Room, playerId: string, mode: GameMode, targetScore?: number): Done {
   const h = hostOnly(room, playerId);
   if (!h.ok) return h;
   if (room.phase !== 'lobby') return fail('notInLobby');
-  if (mode !== 'standard' && mode !== 'short') return fail('badMode');
+  if (mode !== 'standard' && mode !== 'short' && mode !== 'custom') return fail('badMode');
+  if (mode === 'custom') {
+    if (!Number.isInteger(targetScore) || targetScore! < CUSTOM_TARGET_MIN || targetScore! > CUSTOM_TARGET_MAX) return fail('badTarget');
+    room.targetScore = targetScore!;
+  } else if (targetScore !== undefined) {
+    return fail('badTarget');
+  }
   room.mode = mode;
+  return OK;
+}
+
+/** The limits a host may pick: the fixed lists of the rules, plus (test servers only) the extra values the config allows. */
+export interface TimerChoices {
+  turnSeconds: readonly number[];
+  gameSeconds: readonly number[];
+}
+export const defaultTimerChoices = (extra: Partial<TimerChoices> = {}): TimerChoices => ({
+  turnSeconds: [...TURN_SECONDS_OPTIONS, ...(extra.turnSeconds ?? [])],
+  gameSeconds: [...GAME_MINUTES_OPTIONS.map((m) => m * 60), ...(extra.gameSeconds ?? [])],
+});
+
+export function setTimer(room: Room, playerId: string, timer: TimerConfig | null, choices: TimerChoices): Done {
+  const h = hostOnly(room, playerId);
+  if (!h.ok) return h;
+  if (room.phase !== 'lobby') return fail('notInLobby');
+  if (timer !== null && !(choices.turnSeconds.includes(timer.turnSeconds) && choices.gameSeconds.includes(timer.gameSeconds))) return fail('badTimer');
+  room.timer = timer ? { turnSeconds: timer.turnSeconds, gameSeconds: timer.gameSeconds } : null;
   return OK;
 }
 
@@ -170,6 +201,8 @@ export function lobbyViewFor(room: Room, me: string): LobbyView {
     me,
     hostId: room.hostId,
     mode: room.mode,
+    targetScore: room.targetScore,
+    timer: room.timer,
     phase: room.phase,
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,

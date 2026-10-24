@@ -6,9 +6,9 @@
  * The server never sends text: every error is `{key, ...values}` and every
  * notice is `{type, ...values}`; clients translate them (tr / en).
  */
-import type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId } from '@ada/game-core';
+import type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId, TimerConfig } from '@ada/game-core';
 
-export type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId };
+export type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId, TimerConfig };
 
 /**
  * Bumped whenever client and server stop understanding each other. The client
@@ -16,7 +16,11 @@ export type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves
  * client then asks the player to reload the page.
  */
 /** 2: the Soldier demolishes instead of capturing (the `demolish` role action, the `demolished` event, `demolishShield` in the view) and the preview reports the longest road. */
-export const PROTOCOL_VERSION = 2;
+/**
+ * 3: custom mode and the timed mode. `lobby:setMode` carries a target score, `lobby:setTimer` is new, the lobby view tells the target
+ * score and the timer, `GamePayload` carries `timerClock`, and the game view has `winners` (a list) in place of `winner`.
+ */
+export const PROTOCOL_VERSION = 3;
 
 export const ROOM_CODE_LENGTH = 4;
 export const NAME_MAX_LENGTH = 24;
@@ -42,6 +46,8 @@ export const ERROR_KEYS = [
   'unknownRole',
   'badName',
   'badMode',
+  'badTarget',
+  'badTimer',
   'needMorePlayers',
   'game',
 ] as const;
@@ -73,6 +79,10 @@ export interface LobbyView {
   me: string;
   hostId: string | null;
   mode: GameMode;
+  /** the target of a custom game (5-15); kept while another mode is chosen, and only used in a custom game */
+  targetScore: number;
+  /** the timed mode's limits; null = no timer (the default) */
+  timer: TimerConfig | null;
   phase: RoomPhase;
   minPlayers: number;
   maxPlayers: number;
@@ -91,6 +101,16 @@ export interface GameClock {
   running: boolean;
 }
 
+/**
+ * What is left of the timed mode's limits, worked out by the server. Not absolute times: the client counts down from the moment the
+ * message arrived, so a wrong clock on the player's device changes nothing. `turnRemainingMs` is null before the first turn (setup
+ * has no turn limit).
+ */
+export interface TimerClock {
+  turnRemainingMs: number | null;
+  gameRemainingMs: number;
+}
+
 export interface GamePayload {
   /** this player's own view; the only game data a client ever receives */
   view: GameView;
@@ -100,6 +120,8 @@ export interface GamePayload {
   legal: LegalMoves;
   /** the game's running time (server time) */
   clock: GameClock;
+  /** time left on the timed mode's clocks as the server sees it at this moment; null when the game is untimed or over */
+  timerClock: TimerClock | null;
 }
 
 /**
@@ -136,7 +158,10 @@ export interface ClientToServerEvents {
   'room:leave': (p: object, ack: (r: Ack) => void) => void;
   'lobby:setName': (p: { name: string }, ack: (r: Ack) => void) => void;
   'lobby:setRole': (p: { role: RoleId | null }, ack: (r: Ack) => void) => void;
-  'lobby:setMode': (p: { mode: GameMode }, ack: (r: Ack) => void) => void;
+  /** `targetScore` goes with the custom mode (an integer from 5 to 15) and is refused with any other */
+  'lobby:setMode': (p: { mode: GameMode; targetScore?: number }, ack: (r: Ack) => void) => void;
+  /** the host switches the timed mode on (with the limits) or off (`null`) */
+  'lobby:setTimer': (p: { timer: TimerConfig | null }, ack: (r: Ack) => void) => void;
   'lobby:start': (p: object, ack: (r: Ack) => void) => void;
   'lobby:reset': (p: object, ack: (r: Ack) => void) => void;
   'game:action': (action: Action, ack: (r: Ack) => void) => void;
@@ -158,6 +183,6 @@ export interface ServerToClientEvents {
 }
 
 export const CLIENT_EVENTS = [
-  'identity:hello', 'room:create', 'room:join', 'room:leave', 'lobby:setName', 'lobby:setRole', 'lobby:setMode', 'lobby:start',
+  'identity:hello', 'room:create', 'room:join', 'room:leave', 'lobby:setName', 'lobby:setRole', 'lobby:setMode', 'lobby:setTimer', 'lobby:start',
   'lobby:reset', 'game:action', 'game:legal', 'game:preview',
 ] as const satisfies readonly (keyof ClientToServerEvents)[];

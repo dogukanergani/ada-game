@@ -27,20 +27,20 @@ describe('protocol version', () => {
     }
   });
 
-  it('the old client (protocol 1, before the Soldier demolished) is refused by this server (protocol 2), even with a good token', async () => {
-    expect(PROTOCOL_VERSION).toBe(2);
+  it('the old client (protocol 2, before the custom and timed modes) is refused by this server (protocol 3), even with a good token', async () => {
+    expect(PROTOCOL_VERSION).toBe(3);
     const { url } = await startServer();
     const a = await TestClient.login(url);
     const old = await TestClient.open(url);
-    const r = await old.emit('identity:hello', { token: a.token, protocolVersion: 1 });
+    const r = await old.emit('identity:hello', { token: a.token, protocolVersion: 2 });
     expect(errorKey(r)).toBe('incompatibleVersion');
-    expect(r.error).toMatchObject({ serverVersion: 2, clientVersion: 1 });
+    expect(r.error).toMatchObject({ serverVersion: 3, clientVersion: 2 });
     // and it stays anonymous: it cannot reach a room, so it can never send the action it does not know
     expect(errorKey(await old.emit('room:create', { name: 'Old' }))).toBe('noIdentity');
     expect(errorKey(await old.emit('game:action', { type: 'roleAction', name: 'capture', params: { kind: 'road', id: 1 } }))).toBe('noIdentity');
     // a client of the current version is let in
     const fresh = await TestClient.open(url);
-    expect(await fresh.emit('identity:hello', { protocolVersion: 2 })).toMatchObject({ ok: true, protocolVersion: 2 });
+    expect(await fresh.emit('identity:hello', { protocolVersion: 3 })).toMatchObject({ ok: true, protocolVersion: 3 });
   });
 
   it('a returning token is refused too when the version is wrong (nobody sits with an old client)', async () => {

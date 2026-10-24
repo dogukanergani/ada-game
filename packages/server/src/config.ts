@@ -28,6 +28,13 @@ export interface ServerConfig {
    * Same rule as testVp.
    */
   testCreateLimit: number | null;
+  /**
+   * TEST ONLY: one more turn limit (seconds) a host may pick besides the fixed list, so an end-to-end test need not wait a minute
+   * for a turn to run out. Same rule as testVp.
+   */
+  testTurnSeconds: number | null;
+  /** TEST ONLY: one more game limit (seconds) a host may pick besides the fixed list. Same rule as testVp. */
+  testGameSeconds: number | null;
 }
 
 export function configFromEnv(env: Record<string, string | undefined> = process.env): ServerConfig {
@@ -45,8 +52,12 @@ export function configFromEnv(env: Record<string, string | undefined> = process.
   if (testResources !== null && (!Number.isInteger(testResources) || testResources < 1 || testResources > 19)) throw new Error(`bad ADA_TEST_RESOURCES: ${env.ADA_TEST_RESOURCES}`);
   const testCreateLimit = env.NODE_ENV === 'test' && env.ADA_TEST_CREATE_LIMIT ? Number(env.ADA_TEST_CREATE_LIMIT) : null;
   if (testCreateLimit !== null && (!Number.isInteger(testCreateLimit) || testCreateLimit < 1 || testCreateLimit > 100_000)) throw new Error(`bad ADA_TEST_CREATE_LIMIT: ${env.ADA_TEST_CREATE_LIMIT}`);
+  const testTurnSeconds = env.NODE_ENV === 'test' && env.ADA_TEST_TURN_SECONDS ? Number(env.ADA_TEST_TURN_SECONDS) : null;
+  if (testTurnSeconds !== null && (!Number.isInteger(testTurnSeconds) || testTurnSeconds < 1)) throw new Error(`bad ADA_TEST_TURN_SECONDS: ${env.ADA_TEST_TURN_SECONDS}`);
+  const testGameSeconds = env.NODE_ENV === 'test' && env.ADA_TEST_GAME_SECONDS ? Number(env.ADA_TEST_GAME_SECONDS) : null;
+  if (testGameSeconds !== null && (!Number.isInteger(testGameSeconds) || testGameSeconds < 1)) throw new Error(`bad ADA_TEST_GAME_SECONDS: ${env.ADA_TEST_GAME_SECONDS}`);
   const clientDir = env.CLIENT_DIR?.trim() ? resolve(env.CLIENT_DIR.trim()) : defaultClientDir();
-  return { port, corsOrigins, secret: env.SERVER_SECRET?.trim() || null, clientDir, testVp, testSeed, testResources, testCreateLimit };
+  return { port, corsOrigins, secret: env.SERVER_SECRET?.trim() || null, clientDir, testVp, testSeed, testResources, testCreateLimit, testTurnSeconds, testGameSeconds };
 }
 
 /** packages/client/dist next to this package, when it has been built */

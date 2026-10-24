@@ -57,9 +57,9 @@ describe('storage', () => {
 });
 
 const lobby = (over: Partial<LobbyView> = {}): LobbyView => ({
-  code: 'KMTP', me: 'a', hostId: 'a', mode: 'standard', phase: 'lobby', minPlayers: 2, maxPlayers: 5, players: [], ...over,
+  code: 'KMTP', me: 'a', hostId: 'a', mode: 'standard', targetScore: 10, timer: null, phase: 'lobby', minPlayers: 2, maxPlayers: 5, players: [], ...over,
 });
-const payload = (events: GamePayload['events'] = []): GamePayload => ({ view: { me: 'a', phase: 'setup' } as never, legal: { phase: 'setup' } as never, events, clock: { elapsedMs: 0, running: true } });
+const payload = (events: GamePayload['events'] = []): GamePayload => ({ view: { me: 'a', phase: 'setup' } as never, legal: { phase: 'setup' } as never, events, clock: { elapsedMs: 0, running: true }, timerClock: null });
 const run = (msgs: Msg[], from: AppState = initialState) => msgs.reduce(reducer, from);
 
 describe('the store', () => {
@@ -181,7 +181,7 @@ describe('Connection', () => {
   async function boot(protocolVersion?: number) {
     const { createAdaServer } = await import('../../server/src/server');
     const server = createAdaServer({
-      config: { port: 0, corsOrigins: ['*'], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources: null, testCreateLimit: null },
+      config: { port: 0, corsOrigins: ['*'], secret: 's', clientDir: null, testVp: null, testSeed: null, testResources: null, testCreateLimit: null, testTurnSeconds: null, testGameSeconds: null },
       sweepIntervalMs: 0,
     });
     const port = await server.listen(0);
@@ -207,9 +207,9 @@ describe('Connection', () => {
     expect(await until((m) => m.t === 'conn' && m.status === 'online')).toBeTruthy();
   });
 
-  it('the client of before the demolition (protocol 1) is told the app is out of date by this server (protocol 2), and stays out', async () => {
-    expect(PROTOCOL_VERSION).toBe(2);
-    const { conn, seen, until } = await boot(1);
+  it('the client of before the timed mode (protocol 2) is told the app is out of date by this server (protocol 3), and stays out', async () => {
+    expect(PROTOCOL_VERSION).toBe(3);
+    const { conn, seen, until } = await boot(2);
     conn.start();
     expect(await until((m) => m.t === 'conn' && m.status === 'incompatible')).toBeTruthy();
     expect(seen.some((m) => m.t === 'hello' || (m.t === 'conn' && m.status === 'online'))).toBe(false);

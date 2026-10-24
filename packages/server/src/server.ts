@@ -8,13 +8,13 @@ import type { ServerConfig } from './config';
 import { AnonymousIdentity, type PlayerIdentity } from './identity';
 import { TokenBucket } from './rateLimit';
 import { cryptoRng } from './rng';
-import { lobbyViewFor } from './rooms/lobby';
+import { defaultTimerChoices, lobbyViewFor } from './rooms/lobby';
 import { MemoryRoomStore } from './rooms/memoryStore';
-import { clockFor, isActive, type Room } from './rooms/room';
+import { clockFor, isActive, timerClockFor, type Room } from './rooms/room';
 import type { RoomStore } from './rooms/store';
 import { RoomService, type Out } from './service';
 import { createStaticHandler } from './static';
-import { parseAction, parseHello, parseJoin, parseMode, parseNameOnly, parseRole, type Parsed } from './validate';
+import { parseAction, parseHello, parseJoin, parseMode, parseNameOnly, parseRole, parseTimer, type Parsed } from './validate';
 
 export const ROOM_IDLE_MS = 3 * 60 * 60 * 1000;
 
@@ -33,6 +33,8 @@ export interface AdaServerOptions {
   /** how often to look for rooms to delete; 0 = never (tests call sweep themselves) */
   sweepIntervalMs?: number;
   roomIdleMs?: number;
+  /** how often the timed mode's clocks are looked at; 0 = never (tests call `tick` themselves) */
+  timerTickMs?: number;
 }
 
 type Sock = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, { playerId?: string }>;
@@ -52,7 +54,11 @@ export function createAdaServer(opts: AdaServerOptions) {
   const now = opts.now ?? Date.now;
   const identity = opts.identity ?? new AnonymousIdentity(opts.config.secret);
   const store = opts.store ?? new MemoryRoomStore();
-  const service = new RoomService(store, opts.rng ?? cryptoRng(), now, opts.config.testVp ?? null, opts.config.testResources ?? null);
+  const timerChoices = defaultTimerChoices({
+    turnSeconds: opts.config.testTurnSeconds ? [opts.config.testTurnSeconds] : [],
+    gameSeconds: opts.config.testGameSeconds ? [opts.config.testGameSeconds] : [],
+  });
+  const service = new RoomService(store, opts.rng ?? cryptoRng(), now, opts.config.testVp ?? null, opts.config.testResources ?? null, timerChoices);
   const rate = opts.rateLimit ?? { capacity: 20, perSecond: 10 };
   const testCreate = opts.config.testCreateLimit ?? null;
   const createRate = opts.createLimit ?? (testCreate ? { capacity: testCreate, perSecond: testCreate } : { capacity: 10, perSecond: 10 / 60 });
@@ -95,7 +101,7 @@ export function createAdaServer(opts: AdaServerOptions) {
   /** Each player gets their own view and the events as they may see them; nobody else's. */
   function pushGame(room: Room, events: GameEvent[], kind: 'game:update' | 'game:snapshot') {
     if (!room.game) return;
-    for (const { pid, sock } of connectedSockets(room)) sock.emit(kind, { view: viewFor(room.game, pid), events: eventsFor(events, pid), legal: legalMovesFor(room.game, pid), clock: clockFor(room, now()) });
+    for (const { pid, sock } of connectedSockets(room)) sock.emit(kind, { view: viewFor(room.game, pid), events: eventsFor(events, pid), legal: legalMovesFor(room.game, pid), clock: clockFor(room, now()), timerClock: timerClockFor(room.game, now()) });
   }
 
   function pushPresence(room: Room, notice: PresenceNotice, except: string) {
@@ -105,7 +111,7 @@ export function createAdaServer(opts: AdaServerOptions) {
   /** A player (re)attached: they get everything, the others learn about it. */
   function announceArrival(room: Room, pid: string) {
     const sock = sockets.get(pid);
-    if (sock && room.game) sock.emit('game:snapshot', { view: viewFor(room.game, pid), events: [], legal: legalMovesFor(room.game, pid), clock: clockFor(room, now()) });
+    if (sock && room.game) sock.emit('game:snapshot', { view: viewFor(room.game, pid), events: [], legal: legalMovesFor(room.game, pid), clock: clockFor(room, now()), timerClock: timerClockFor(room.game, now()) });
     pushLobby(room);
     if (room.phase !== 'lobby') pushPresence(room, { type: 'playerReconnected', player: pid }, pid);
   }
@@ -192,7 +198,11 @@ export function createAdaServer(opts: AdaServerOptions) {
       }
       case 'lobby:setMode': {
         const p = parseMode(payload);
-        return isOk(p) ? inRoom(service.setMode(pid, p.value.mode), pushLobby) : { ack: err('badPayload') };
+        return isOk(p) ? inRoom(service.setMode(pid, p.value.mode, p.value.targetScore), pushLobby) : { ack: err('badPayload') };
+      }
+      case 'lobby:setTimer': {
+        const p = parseTimer(payload);
+        return isOk(p) ? inRoom(service.setTimer(pid, p.value.timer), pushLobby) : { ack: err('badPayload') };
       }
       case 'lobby:start':
         return inRoom(service.start(pid), (room) => {
@@ -303,15 +313,42 @@ export function createAdaServer(opts: AdaServerOptions) {
   const interval = sweepEvery > 0 ? setInterval(sweep, sweepEvery) : null;
   interval?.unref();
 
+  /**
+   * One look at the timed games: those whose time is up move on and everyone in them is told. Driven by the interval below in
+   * production and called directly in tests, with the injected clock moved on by hand.
+   */
+  const tick = () => {
+    for (const { code, events } of service.tickTimers()) {
+      const room = service.get(code);
+      if (!room) continue;
+      pushGame(room, events, 'game:update');
+      if (room.phase === 'finished') pushLobby(room);
+    }
+  };
+  const tickEvery = opts.timerTickMs ?? 1000;
+  const timerInterval =
+    tickEvery > 0
+      ? setInterval(() => {
+          try {
+            tick();
+          } catch (e) {
+            console.error('timer tick failed', e);
+          }
+        }, tickEvery)
+      : null;
+  timerInterval?.unref();
+
   return {
     io,
     store,
     service,
     sweep,
+    tick,
     listen: (port: number) => new Promise<number>((resolve) => http.listen(port, () => resolve((http.address() as { port: number }).port))),
     close: () =>
       new Promise<void>((resolve) => {
         if (interval) clearInterval(interval);
+        if (timerInterval) clearInterval(timerInterval);
         void io.close(() => resolve());
       }),
   };

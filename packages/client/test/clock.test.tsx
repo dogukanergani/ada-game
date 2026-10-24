@@ -33,7 +33,7 @@ describe('the elapsed time', () => {
 });
 
 describe('the clock in the store', () => {
-  const payload = (elapsedMs: number, running = true) => ({ view: { me: 'a', phase: 'main' } as never, legal: {} as never, events: [], clock: { elapsedMs, running } });
+  const payload = (elapsedMs: number, running = true) => ({ view: { me: 'a', phase: 'main' } as never, legal: {} as never, events: [], clock: { elapsedMs, running }, timerClock: null });
   it('keeps the latest figure with the moment it arrived, and a reconnect snapshot replaces it', () => {
     let s = reducer(initialState, { t: 'game', kind: 'snapshot', payload: payload(12 * MIN), at: 400 });
     expect(s.clock).toEqual({ elapsedMs: 12 * MIN, running: true, at: 400 });

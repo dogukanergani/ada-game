@@ -1,5 +1,5 @@
-import type { GameMode, GameState, RoleId } from '@ada/game-core';
-import type { ErrorKey, GameClock, RoomPhase, ServerError } from '@ada/protocol';
+import type { GameMode, GameState, RoleId, TimerConfig } from '@ada/game-core';
+import type { ErrorKey, GameClock, RoomPhase, ServerError, TimerClock } from '@ada/protocol';
 
 export interface Seat {
   playerId: string;
@@ -19,6 +19,10 @@ export interface Room {
   code: string;
   hostId: string | null;
   mode: GameMode;
+  /** the target of a custom game; kept while another mode is chosen */
+  targetScore: number;
+  /** the timed mode's limits, chosen in the lobby; null = untimed */
+  timer: TimerConfig | null;
   phase: RoomPhase;
   /** join order */
   seats: Seat[];
@@ -36,6 +40,16 @@ export function clockFor(room: Room, now: number): GameClock {
   if (room.startedAt === null) return { elapsedMs: 0, running: false };
   const end = room.endedAt ?? now;
   return { elapsedMs: Math.max(0, end - room.startedAt), running: room.endedAt === null };
+}
+
+/** What is left on the timed mode's clocks at `now`; null for an untimed or finished game. */
+export function timerClockFor(game: GameState | null, now: number): TimerClock | null {
+  if (!game || !game.timer || game.phase === 'finished' || game.gameStartedAt === null) return null;
+  const left = (limitSeconds: number, since: number) => Math.max(0, limitSeconds * 1000 - (now - since));
+  return {
+    turnRemainingMs: game.turnStartedAt === null ? null : left(game.timer.turnSeconds, game.turnStartedAt),
+    gameRemainingMs: left(game.timer.gameSeconds, game.gameStartedAt),
+  };
 }
 
 export const fail = (key: ErrorKey, detail: Record<string, unknown> = {}): { ok: false; error: ServerError } => ({
