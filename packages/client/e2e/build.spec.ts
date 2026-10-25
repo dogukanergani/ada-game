@@ -1,13 +1,38 @@
 import { expect, test } from './test';
-import { MOBILE } from './helpers';
+import type { Page } from '@playwright/test';
+import { DESKTOP, MOBILE, SMALL, shot } from './helpers';
 import { bankTowardRoad, doForced, mover, newTable, playSetup, startShort } from './table';
+
+/** The sheet sits inside the screen, does not scroll sideways, and every control in it is at least 44 px. */
+async function checkFits(page: Page, viewport: { width: number; height: number }) {
+  const box = (await page.locator('.sheet').boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+  expect(await page.locator('.sheet').evaluate((e) => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(1);
+  const small = await page.locator('.sheet button').evaluateAll((els) =>
+    els
+      .filter((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && (r.height < 43.5 || r.width < 43.5);
+      })
+      .map((e) => `${e.className} ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`),
+  );
+  expect(small, 'controls under 44 px').toEqual([]);
+}
 
 /**
  * Building starts from one "İnşa" button and its sheet. The sheet only changes the way in:
  * a tap on a row starts the usual build mode on the board, a tap on a "?" only shows the rule.
  */
-test('the build sheet: three rows, rules behind the "?", a row starts the build mode', async ({ browser }) => {
-  const { seats } = await newTable(browser, ['Ayşe', 'Çağlar'], MOBILE);
+const sizes = [
+  { label: 'mobile' as const, viewport: MOBILE },
+  { label: 'small' as const, viewport: SMALL },
+  { label: 'desktop' as const, viewport: DESKTOP },
+];
+
+for (const { label, viewport } of sizes) test(`the build sheet: three rows, rules behind the "?", a row starts the build mode, ${label} (${viewport.width}x${viewport.height})`, async ({ browser }) => {
+  const { seats } = await newTable(browser, ['Ayşe', 'Çağlar'], viewport);
   await startShort(seats);
   await playSetup(seats);
 
@@ -37,11 +62,15 @@ test('the build sheet: three rows, rules behind the "?", a row starts the build 
     const dialog = who.page.getByRole('dialog');
     await expect(dialog.locator('.build-row')).toHaveCount(3);
     await expect(dialog.locator('[data-rule]')).toHaveCount(0);
+    await checkFits(who.page, viewport);
+    await shot(who.page, '42-build-sheet', label);
 
     // the "?" shows the rule and leaves the sheet open
     await dialog.locator('[data-info="settlement"]').click();
     await expect(dialog.locator('[data-rule="settlement"]')).toContainText('5');
     await expect(dialog).toBeVisible();
+    await checkFits(who.page, viewport);
+    await shot(who.page, '43-build-sheet-info', label);
     await dialog.locator('[data-info="settlement"]').click();
     await expect(dialog.locator('[data-rule]')).toHaveCount(0);
 
