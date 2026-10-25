@@ -66,13 +66,19 @@ export function createAdaServer(opts: AdaServerOptions) {
   const idleMs = opts.roomIdleMs ?? ROOM_IDLE_MS;
 
   const staticHandler = opts.config.clientDir ? createStaticHandler(opts.config.clientDir) : null;
-  const http = createServer(
-    staticHandler ??
-      ((_req, res) => {
-        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-        res.end('not found');
-      }),
-  );
+  const notFound = (_req: unknown, res: import('node:http').ServerResponse) => {
+    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end('not found');
+  };
+  const http = createServer((req, res) => {
+    // a platform's own liveness probe: no auth, no room state, just "the process answers"
+    if (req.method === 'GET' && req.url === '/healthz') {
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('ok');
+      return;
+    }
+    (staticHandler ?? notFound)(req, res);
+  });
   const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, { playerId?: string }>(http, {
     transports: ['websocket'],
     maxHttpBufferSize: 16 * 1024,

@@ -70,6 +70,14 @@ describe('serving the built client', () => {
     const none = await startServer();
     expect((await get(none.url, '/')).status).toBe(404);
   });
+
+  it('answers a liveness check without a client built, auth, or touching any room', async () => {
+    const none = await startServer();
+    const r = await get(none.url, '/healthz');
+    expect(r.status).toBe(200);
+    expect(r.body).toBe('ok');
+    expect((await get(none.url, '/healthz', 'POST')).status).toBe(404);
+  });
 });
 
 describe('the test-only target score', () => {
