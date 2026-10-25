@@ -95,6 +95,10 @@ The end-to-end servers use test-only switches (`ADA_TEST_SEED`, `ADA_TEST_VP`, `
 
 **Next:** playtesting and rebalancing, persistent rooms, accounts and matchmaking, and wrapping the same web code with Capacitor for iOS and Android (planned, not started).
 
+## Deploying
+
+A `Dockerfile`, `.dockerignore` and `fly.toml` at the repo root build and run the single process (client + server) on Fly.io, with the one machine kept always on (rooms live in memory, so a stopped machine would drop active games) and a `/healthz` check. Step-by-step setup, secrets vs. plain env vars, and post-deploy verification: [docs/DEPLOY.md](docs/DEPLOY.md) (in Turkish).
+
 Design document: [docs/GDD.md](docs/GDD.md) (in Turkish). Decisions and assumptions log: [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ---
