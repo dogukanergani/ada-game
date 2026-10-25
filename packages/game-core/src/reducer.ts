@@ -253,7 +253,9 @@ function acceptTrade(ctx: Ctx, pid: string, offerId: number) {
   ctx.events.push({ type: 'tradeAccepted', offerId, from: offer.from, to: pid, give: offer.give, want: offer.want });
 
   const owner = getPlayer(s, offer.from);
-  const bonus = roleOf(s, owner.id).onTradeAccepted?.({ counters: s.turnFlags.counters, bank: { ...s.bank }, rng: ctx.rng });
+  // a gift (one side empty) is not an exchange: roles that reward accepted trades are told which kind this was
+  const reciprocal = handCount(offer.give) > 0 && handCount(offer.want) > 0;
+  const bonus = roleOf(s, owner.id).onTradeAccepted?.({ counters: s.turnFlags.counters, bank: { ...s.bank }, rng: ctx.rng, reciprocal });
   if (!bonus) return;
   if (bonus.counter) s.turnFlags.counters[bonus.counter] = (s.turnFlags.counters[bonus.counter] ?? 0) + 1;
   if (bonus.gains) {

@@ -147,7 +147,8 @@ function checkOffer(s: GameState, pid: string, giveIn: unknown, wantIn: unknown)
   if (s.phase !== 'main') return phaseErr(s);
   const give = sanitizeHand(giveIn);
   const want = sanitizeHand(wantIn);
-  if (!give || !want || handCount(give) === 0 || handCount(want) === 0) return err('invalidTrade');
+  // one side may be empty (a gift, or asking for a gift); both empty is not an offer
+  if (!give || !want || (handCount(give) === 0 && handCount(want) === 0)) return err('invalidTrade');
   if (RESOURCES.some((r) => give[r] > 0 && want[r] > 0)) return err('invalidTrade');
   if (!canAfford(getPlayer(s, pid).hand, give)) return err('cannotAfford', { cost: give });
   return null;

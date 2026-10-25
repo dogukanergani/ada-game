@@ -8,6 +8,12 @@ export function handText(t: Translate, hand: Partial<Hand> | null | undefined): 
   return parts.length ? parts.join(', ') : t('list.none');
 }
 
+/** Which sides of an offer hold something: both (an exchange), only what is given (a gift) or only what is asked (a request for a gift). */
+export function sideOf(give: Partial<Hand>, want: Partial<Hand>): 'both' | 'give' | 'want' {
+  const has = (h: Partial<Hand>) => RESOURCES.some((r) => (h[r] ?? 0) > 0);
+  return has(give) && has(want) ? 'both' : has(give) ? 'give' : 'want';
+}
+
 /** "A", "A and B", "A, B and C": the last name is joined with a word, so it reads right in either language. */
 export function nameList(t: Translate, names: string[]): string {
   if (names.length < 2) return names.join('');
@@ -67,10 +73,14 @@ export function formatEvent(e: GameEvent, { t, name, me }: FormatContext): strin
     }
     case 'bankTraded':
       return t('event.bankTraded', { player: name(e.player), ratio: e.ratio, give: resource(e.give), get: resource(e.get) });
-    case 'tradeOffered':
-      return t('event.tradeOffered', { player: name(e.offer.from), give: handText(t, e.offer.give), want: handText(t, e.offer.want) });
-    case 'tradeAccepted':
-      return t('event.tradeAccepted', { from: name(e.from), to: name(e.to), give: handText(t, e.give), want: handText(t, e.want) });
+    case 'tradeOffered': {
+      const p = { player: name(e.offer.from), give: handText(t, e.offer.give), want: handText(t, e.offer.want) };
+      return t(sideOf(e.offer.give, e.offer.want) === 'both' ? 'event.tradeOffered' : sideOf(e.offer.give, e.offer.want) === 'give' ? 'event.tradeOfferedGift' : 'event.tradeOfferedAsk', p);
+    }
+    case 'tradeAccepted': {
+      const p = { from: name(e.from), to: name(e.to), give: handText(t, e.give), want: handText(t, e.want) };
+      return t(sideOf(e.give, e.want) === 'both' ? 'event.tradeAccepted' : sideOf(e.give, e.want) === 'give' ? 'event.tradeAcceptedGift' : 'event.tradeAcceptedAsk', p);
+    }
     case 'tradeCancelled':
       return t('event.tradeCancelled');
     case 'devCardBought':

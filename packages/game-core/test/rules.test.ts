@@ -430,6 +430,37 @@ describe('player trade', () => {
     expect(s.offers).toEqual([]);
   });
 
+  it('an offer may leave one side empty (a gift, or a request for one), but not both', () => {
+    const total = (s: GameState) => RESOURCES.map((r) => sum(s, r));
+    let s = mainPhase(3);
+    give(s, 'p0', hand({ lumber: 2 }));
+    give(s, 'p1', hand({ ore: 2 }));
+    expect(validate(s, 'p0', { type: 'offerTrade', give: {}, want: {} })).toMatchObject({ type: 'invalidTrade' });
+    expect(validate(s, 'p0', { type: 'offerTrade', give: { lumber: 0 }, want: { ore: 0 } })).toMatchObject({ type: 'invalidTrade' });
+    // the rules that stay: no resource on both sides, the giver must hold what is given, no negative amounts
+    expect(validate(s, 'p0', { type: 'offerTrade', give: { lumber: 1 }, want: { lumber: 1 } })).toMatchObject({ type: 'invalidTrade' });
+    expect(validate(s, 'p0', { type: 'offerTrade', give: { lumber: 3 }, want: {} })).toMatchObject({ type: 'cannotAfford' });
+    expect(validate(s, 'p0', { type: 'offerTrade', give: { lumber: -1 }, want: {} })).toMatchObject({ type: 'invalidTrade' });
+
+    // a gift: the accepter pays nothing and receives the gift
+    const before = total(s);
+    s = act(s, 'p0', { type: 'offerTrade', give: { lumber: 2 }, want: {} });
+    expect(validate(s, 'p2', { type: 'acceptTrade', offerId: s.offers[0].id })).toBeNull();
+    s = act(s, 'p2', { type: 'acceptTrade', offerId: s.offers[0].id });
+    expect(s.players[0].hand).toEqual(hand({}));
+    expect(s.players[2].hand).toEqual(hand({ lumber: 2 }));
+    expect(total(s)).toEqual(before);
+
+    // a request for a gift: the accepter pays what is asked, the offerer gives nothing; an accepter who lacks it cannot accept
+    s = act(s, 'p0', { type: 'offerTrade', give: {}, want: { ore: 2 } });
+    expect(validate(s, 'p2', { type: 'acceptTrade', offerId: s.offers[0].id })).toMatchObject({ type: 'cannotAfford' });
+    s = act(s, 'p1', { type: 'acceptTrade', offerId: s.offers[0].id });
+    expect(s.players[0].hand).toEqual(hand({ ore: 2 }));
+    expect(s.players[1].hand).toEqual(hand({}));
+    expect(total(s)).toEqual(before);
+    for (const r of RESOURCES) expect(sum(s, r)).toBe(19);
+  });
+
   it('cancel and replace', () => {
     let s = mainPhase(2);
     give(s, 'p0', hand({ lumber: 2 }));

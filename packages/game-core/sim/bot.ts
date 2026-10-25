@@ -68,7 +68,10 @@ export function moves(s: GameState, rng: Rng, actionsThisTurn: number): Move[] {
         const give = pick(owned, rng);
         const want = pick(RESOURCES.filter((r) => r !== give), rng);
         add({ type: 'offerTrade', give: { [give]: 1 }, want: { [want]: 1 + Math.floor(rng() * 2) } }, 0.25);
+        // one-sided offers: a gift, and a request for a gift
+        add({ type: 'offerTrade', give: { [give]: 1 }, want: {} }, 0.1);
       }
+      add({ type: 'offerTrade', give: {}, want: { [pick([...RESOURCES], rng)]: 1 } }, 0.1);
       for (const o of s.offers) {
         add({ type: 'cancelTrade', offerId: o.id }, 0.3, o.from);
         for (const q of s.players) {

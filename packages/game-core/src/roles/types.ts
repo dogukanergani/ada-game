@@ -51,6 +51,7 @@ export interface RoleDef {
   /**
    * The role owner's trade offer was accepted. May return bank resources and
    * name a per-turn counter to bump (the hook itself reads `counters` to limit use).
+   * `reciprocal` is true when both sides of the offer gave something; a one-sided offer (a gift) is false.
    */
-  onTradeAccepted?(c: { counters: Record<string, number>; bank: Hand; rng: Rng }): { gains?: Partial<Hand>; counter?: string } | void;
+  onTradeAccepted?(c: { counters: Record<string, number>; bank: Hand; rng: Rng; reciprocal: boolean }): { gains?: Partial<Hand>; counter?: string } | void;
 }

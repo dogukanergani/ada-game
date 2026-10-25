@@ -111,8 +111,17 @@ const samples: Record<GameEvent['type'], GameEvent[]> = {
     { type: 'stolen', thief: 'b', victim: 'c', resource: null },
   ],
   bankTraded: [{ type: 'bankTraded', player: 'a', give: 'ore', get: 'wool', ratio: 3 }],
-  tradeOffered: [{ type: 'tradeOffered', offer: { id: 1, from: 'a', give: hand({ ore: 1 }), want: hand({ wool: 1 }) } }],
-  tradeAccepted: [{ type: 'tradeAccepted', offerId: 1, from: 'a', to: 'b', give: hand({ ore: 1 }), want: hand({ wool: 1 }) }],
+  // an exchange, a gift (only given) and a request for a gift (only asked) each read differently
+  tradeOffered: [
+    { type: 'tradeOffered', offer: { id: 1, from: 'a', give: hand({ ore: 1 }), want: hand({ wool: 1 }) } },
+    { type: 'tradeOffered', offer: { id: 1, from: 'a', give: hand({ ore: 2 }), want: hand() } },
+    { type: 'tradeOffered', offer: { id: 1, from: 'a', give: hand(), want: hand({ wool: 1 }) } },
+  ],
+  tradeAccepted: [
+    { type: 'tradeAccepted', offerId: 1, from: 'a', to: 'b', give: hand({ ore: 1 }), want: hand({ wool: 1 }) },
+    { type: 'tradeAccepted', offerId: 1, from: 'a', to: 'b', give: hand({ ore: 2 }), want: hand() },
+    { type: 'tradeAccepted', offerId: 1, from: 'a', to: 'b', give: hand(), want: hand({ wool: 1 }) },
+  ],
   tradeCancelled: [{ type: 'tradeCancelled', offerId: 1 }],
   devCardBought: [{ type: 'devCardBought', player: 'a', kind: 'knight' }, { type: 'devCardBought', player: 'b', kind: null }],
   devCardPlayed: [{ type: 'devCardPlayed', player: 'a', kind: 'monopoly' }],

@@ -7,7 +7,7 @@ import {
   offerWantTiles, ownOffer, type IncomingOffer,
 } from '../../game/tradeView';
 import { useT } from '../../i18n/context';
-import { handText } from '../../i18n/format';
+import { handText, sideOf } from '../../i18n/format';
 import { ResourceChips, ResourceRow, tileReasonText } from '../../ui/ResourceRow';
 import { Sheet } from '../../ui/Sheet';
 
@@ -295,11 +295,22 @@ function PlayerDisc({ view, id }: { view: GameView; id: string }) {
   );
 }
 
-/** What is given, an arrow, what is asked for: one compact line (it wraps on a narrow screen). */
+/** What is given, an arrow, what is asked for: one compact line (it wraps on a narrow screen). A one-sided offer shows its one side and says it asks nothing back (or gives nothing). */
 function Exchange({ give, want }: { give: Hand; want: Hand }) {
   const t = useT();
+  const kind = sideOf(give, want);
+  if (kind !== 'both') {
+    return (
+      <div className="exchange" data-kind={kind === 'give' ? 'gift' : 'ask'}>
+        <div className="exchange-side">
+          <span className="exchange-label">{t(kind === 'give' ? 'trade.giftGives' : 'trade.giftAsks')}</span>
+          <ResourceChips hand={kind === 'give' ? give : want} />
+        </div>
+      </div>
+    );
+  }
   return (
-    <div className="exchange">
+    <div className="exchange" data-kind="both">
       <div className="exchange-side">
         <span className="exchange-label">{t('trade.gives')}</span>
         <ResourceChips hand={give} />

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEV_CARD_KINDS, DEV_DECK_SIZE, canAfford, costFor, PIECE_LIMITS, RESOURCES, ROLE_LIST, applyAction, bankStockFor, createGame, legalBankTrades,
   legalCityVertices, legalDevPlays, legalRoadEdges, legalRobberTiles, legalRoleActions, legalSettlementVertices, legalStealVictims,
-  longestRoadFor, publicPoints, tickTimers, topologyOf, totalPoints, validate, viewFor,
+  handCount, longestRoadFor, publicPoints, tickTimers, topologyOf, totalPoints, validate, viewFor,
   type Action, type GameEvent, type GameMode, type GameState, type Hand, type Rng,
 } from '../src';
 import { mulberry32 } from './helpers';
@@ -287,6 +287,12 @@ function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxStep
     for (const e of r.events) {
       if (e.type === 'stolen') stats.stolen++;
       if (e.type === 'productionBlocked') stats.blocked++;
+      if (e.type === 'tradeAccepted') {
+        const gift = handCount(e.give) === 0 || handCount(e.want) === 0;
+        if (gift) stats.byType['trade:oneSided'] = (stats.byType['trade:oneSided'] ?? 0) + 1;
+        // a one-sided trade never pays a role's trade bonus
+        if (gift && r.events.some((x) => x.type === 'roleBonus' && x.player === e.from)) throw new Error('a one-sided trade paid a role bonus');
+      }
     }
     invariants(s);
 
@@ -331,7 +337,7 @@ describe('random playouts', () => {
     // the bot must have exercised every kind of action, otherwise the run proves little
     for (const t of [
       'placeSettlement', 'placeRoad', 'upgradeCity', 'roll', 'discard', 'moveRobber', 'steal', 'bankTrade', 'offerTrade', 'acceptTrade',
-      'buyDevCard', 'playKnight', 'playRoadBuilding', 'playYearOfPlenty', 'playMonopoly', 'endTurn', 'role:demolish',
+      'buyDevCard', 'playKnight', 'playRoadBuilding', 'playYearOfPlenty', 'playMonopoly', 'endTurn', 'role:demolish', 'trade:oneSided',
     ]) {
       if (!stats.byType[t]) throw new Error(`the bot never played ${t}`);
     }

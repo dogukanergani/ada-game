@@ -114,8 +114,9 @@ export const ROLE_DEFS: RoleDef[] = [
   },
   {
     id: 'diplomat',
-    onTradeAccepted: ({ counters, bank, rng }) => {
-      if ((counters[TRADE_BONUS_COUNTER] ?? 0) >= 1) return;
+    // only a real exchange pays: a gift costs nothing to get accepted, so it would be a free bonus every turn
+    onTradeAccepted: ({ counters, bank, rng, reciprocal }) => {
+      if (!reciprocal || (counters[TRADE_BONUS_COUNTER] ?? 0) >= 1) return;
       const r = pickResource(bank, rng);
       if (r) return { gains: { [r]: 1 }, counter: TRADE_BONUS_COUNTER };
     },

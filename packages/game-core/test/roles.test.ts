@@ -102,6 +102,28 @@ describe('diplomat: bonus for accepted offers', () => {
     for (const r of RESOURCES) expect(sum(s, r)).toBe(19);
   });
 
+  it('a gift (one side empty) that is accepted earns no bonus, and does not use up the turn\'s one bonus', () => {
+    let s = mainPhase(2, { roles: ['diplomat', 'sage'] });
+    give(s, 'p0', hand({ lumber: 3 }));
+    give(s, 'p1', hand({ ore: 3 }));
+    const cards = (g: GameState, i: number) => RESOURCES.reduce((n, r) => n + g.players[i].hand[r], 0);
+    // giving a card away
+    s = act(s, 'p0', { type: 'offerTrade', give: { lumber: 1 }, want: {} });
+    s = act(s, 'p1', { type: 'acceptTrade', offerId: s.offers[0].id }, scripted([0.3]));
+    expect(cards(s, 0)).toBe(2);
+    expect(s.turnFlags.counters.tradeBonus).toBeUndefined();
+    // asking for a card as a gift
+    s = act(s, 'p0', { type: 'offerTrade', give: {}, want: { ore: 1 } });
+    s = act(s, 'p1', { type: 'acceptTrade', offerId: s.offers[0].id }, scripted([0.3]));
+    expect(cards(s, 0)).toBe(3);
+    expect(s.turnFlags.counters.tradeBonus).toBeUndefined();
+    // a real exchange afterwards still pays its bonus
+    s = trade(s);
+    expect(cards(s, 0)).toBe(4);
+    expect(s.turnFlags.counters.tradeBonus).toBe(1);
+    for (const r of RESOURCES) expect(sum(s, r)).toBe(19);
+  });
+
   it('the counter resets with the next turn', () => {
     let s = mainPhase(2, { roles: ['diplomat', 'sage'] });
     give(s, 'p0', hand({ lumber: 3 }));

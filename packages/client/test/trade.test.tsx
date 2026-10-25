@@ -82,13 +82,16 @@ describe('offer tiles', () => {
     for (const t of [...offerGiveTiles(theirs.view, h(), h(), false), ...offerWantTiles(h(), h(), false)]) expect(t.reason).toEqual({ code: 'notYourTurn' });
   });
 
-  it('summaries tell what is chosen and what is still missing; an offer needs both sides', () => {
+  it('summaries tell what is chosen and what is still missing; an offer needs one side at least', () => {
     expect(offerSummary(h(), h())).toEqual({ kind: 'none' });
     expect(offerSummary(h({ ore: 2 }), h())).toEqual({ kind: 'give', give: h({ ore: 2 }) });
     expect(offerSummary(h(), h({ wool: 1 }))).toEqual({ kind: 'want', want: h({ wool: 1 }) });
     expect(offerSummary(h({ ore: 2 }), h({ wool: 1 }))).toMatchObject({ kind: 'full' });
     expect(canSendOffer(true, h({ ore: 2 }), h({ wool: 1 }))).toBe(true);
-    expect(canSendOffer(true, h({ ore: 2 }), h())).toBe(false);
+    // one side may stay empty (a gift, or a request for one); both empty is not an offer
+    expect(canSendOffer(true, h({ ore: 2 }), h())).toBe(true);
+    expect(canSendOffer(true, h(), h({ wool: 1 }))).toBe(true);
+    expect(canSendOffer(true, h(), h())).toBe(false);
     expect(canSendOffer(false, h({ ore: 2 }), h({ wool: 1 }))).toBe(false);
   });
 });

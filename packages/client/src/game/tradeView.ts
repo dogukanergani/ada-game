@@ -121,8 +121,8 @@ export function offerSummary(give: Hand, want: Hand): OfferSummary {
   return { kind: 'none' };
 }
 
-/** An offer can be sent when it has something on both sides; whether it is legal at all is the server's call. */
-export const canSendOffer = (myTurn: boolean, give: Hand, want: Hand): boolean => myTurn && countHand(give) > 0 && countHand(want) > 0;
+/** An offer can be sent when it has something on at least one side (a gift or a request for one is fine); whether it is legal at all is the server's call. */
+export const canSendOffer = (myTurn: boolean, give: Hand, want: Hand): boolean => myTurn && (countHand(give) > 0 || countHand(want) > 0);
 
 export interface IncomingOffer {
   offer: TradeOffer;
