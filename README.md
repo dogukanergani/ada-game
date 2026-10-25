@@ -18,6 +18,7 @@ A turn-based, room-code multiplayer island-building game for 2–5 players, insp
 - **Entry screen, Settings and How to play.** A gear (language, "forget this device's identity") and a read-only rules sheet are reachable from the home screen, the lobby and the game; the rules take no game state, so they cannot change a game or show a rival's hand, and they stay off while the game forces a sheet open (discarding, choosing a victim).
 - **The game clock is the server's.** Each game payload carries the elapsed time worked out on the server (`clock`); the client only counts on from the moment it arrived, so a refresh or a wrong device clock cannot change it.
 - **Custom target and timed mode.** Standard (10), short (7) or custom (5-15 points; map and bank follow the player count), with an optional turn limit (60-180 s) and game limit (30-90 min). The server drives `tickTimers(state, rng, now)` from one interval and an injectable clock; a turn that runs out ends by itself, a game that runs out is won by everyone on the top score (`winners` is a list). Off by default, and then nothing changes.
+- **One build sheet, flying cards, gifts.** The dock has one "Build" button that opens a sheet (cost, a "?" with the rule, the reason when off) and then starts the usual board mode; a roll's cards fly from the producing tiles to the seats that got them (visual only, capped to what the server gave, off with reduced motion and on reload); a trade offer may leave one side empty (a gift), which a Diplomat gets no bonus for.
 - **Maps are data.** Three layouts (19, 30 and 14 tiles) are `MapDef` values, validated by `validateMap`; adding a map means adding data.
 
 ## Architecture
@@ -66,7 +67,7 @@ npm run start           # http://localhost:3001
 | End to end | Playwright, two mobile contexts, seeded test servers: lobby, setup, dice, trade, a full short game, the Soldier's demolition, reconnection | `packages/client/e2e` |
 | Balance report | Role win rates from random and greedy bots across player counts and modes (a report, not a pass/fail test) | `packages/game-core/scripts/balance.ts` |
 
-Current counts from `npm test`: **188** client + **185** game-core + **114** server = **487** unit/integration tests passing. `npm run e2e` runs **121** Playwright scenarios.
+Current counts from `npm test`: **192** client + **187** game-core + **114** server = **493** unit/integration tests passing. `npm run e2e` runs **135** Playwright scenarios.
 
 ```bash
 npm test             # all unit, fuzz, leak and server tests
