@@ -1,4 +1,4 @@
-# Ada: Oyun Tasarım Dokümanı (GDD) v0.6
+# Ada: Oyun Tasarım Dokümanı (GDD) v0.7
 
 22 Ekim 2026
 
@@ -47,6 +47,8 @@ Ada tek bir web kod tabanı olarak yazılır: tarayıcıda linkle açılır, ayn
 - **Rastgelelik tek yerden:** Zar ve deste yalnızca sunucuda, `rng` parametresiyle üretilir; bu testleri tekrarlanabilir yapar.
 
 **Yığın:** TypeScript, Node + Socket.IO, React + Vite, SVG harita; uygulama için Capacitor. Geliştirme VS Code'da Claude Code ile yapılır, arayüz testi Playwright ile yapılır (iki ayrı mobil tarayıcı bağlamı).
+
+**Barındırma:** Fly.io seçildi. Gerekçe: ücretsiz katman sunan platformlar (Render) boşta kalınca sunucuyu durduruyor, oda bilgisi bellekte tutulduğu için bu aktif oyunları siler; Fly.io WebSocket için uygun ve en ucuz seçenek (aylık yaklaşık 2-5$, kredi kartı gerekir, kalıcı ücretsiz katman yok). Makine sürekli açık tutulur (auto-stop kapalı). Fly.io otomatik bir `.fly.dev` adresi ve HTTPS verir; kendi alan adı (domain) isteğe bağlıdır ve her zaman hosting'in üstüne eklenir, onun yerine geçmez. Mağaza uygulaması (Capacitor) da aynı barındırılan sunucuya bağlanır, ayrı bir barındırma gerektirmez.
 
 **Mevcut prototip:** Ada v0 kural referansı olarak kalır; yeni kod bu GDD'ye göre baştan kuruldu (çekirdek, sunucu, istemci); ayrıntılı uygulama kararları depodaki docs/DECISIONS.md dosyasındadır.
 
@@ -318,12 +320,12 @@ Her kural değişikliği, aşağıdaki katmanların hepsinden geçmeden bitmiş 
    - *Kapı:* iki oyuncu telefonda baştan sona bir oyun bitirebiliyor.
 4. **Kapalı test:** Arkadaşlarla gözlemli oyunlar, botla denge simülasyonu, kural ve rol ayarı.
    - *Kapı:* hiçbir rolün kazanma oranı eşit paydan 5 puandan fazla sapmıyor.
-5. **Yayın:** Sunucuya yükleme, HTTPS adres, telefona PWA olarak ekleme.
+5. **Yayın:** Fly.io'ya yükleme (Dockerfile, fly.toml, makine açık), .fly.dev adresi, PWA olarak ekleme.
 6. **Mağaza uygulaması:** Capacitor ile iOS ve Android paketi; titreşim ve sıra bildirimi.
 
 Kapılar aşamaları sıraya koyar: çekirdek testlerden geçmeden sunucuya, telefonda oyun bitmeden kapalı teste, roller dengelenmeden yayına geçilmez.
 
-**Durum (25 Ekim 2026):** 1-4. aşamalar tamamlandı. Kapalı test başladı: 2 oyunculu, Özel modda (5 puan) ilk tam oyun oynanıp bitirildi. Zamanlı mod ve Özel hedef puan eklendi (v0.5). Devam eden geri bildirim: inşa alt menüsü, üretim uçuş animasyonu, karşılıksız takas (v0.6). Bekleyen: 3+ oyunculu tam oyun, Asker ve Bilge dengesinin gerçek oyunla doğrulanması.
+**Durum (25 Ekim 2026):** 1-4. aşamalar tamamlandı. Kapalı test başladı: 2 oyunculu, Özel modda (5 puan) ilk tam oyun oynanıp bitirildi. Zamanlı mod, Özel hedef puan (v0.5), inşa alt menüsü, üretim uçuş animasyonu, karşılıksız takas (v0.6) eklendi. Barındırma kararı verildi: Fly.io (v0.7); yayına hazırlık başlıyor. Bekleyen: 3+ oyunculu tam oyun, Asker ve Bilge dengesinin gerçek oyunla doğrulanması.
 
 **Sonraki sürümler (haritada yok):** hesap sistemi (e-posta, Google, Apple; arkadaş listesi ve istatistikler), ses ve müzik, özel haritalar ve sıralamalı online eşleştirme. Çeviri altyapısı ise haritadaki ilk aşamadan itibaren kurulur.
 
