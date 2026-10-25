@@ -34,6 +34,20 @@ function CostHead() {
   );
 }
 
+/** A cost as icon, count and name for each resource it asks for: shared by the cost table and the build sheet. */
+export function CostItems({ hand }: { hand: Hand }) {
+  const t = useT();
+  return (
+    <>
+      {RESOURCES.filter((r) => hand[r] > 0).map((r) => (
+        <span key={r} className="cost-item">
+          <ResourceIcon resource={r} size={20} /> {hand[r]} {t(`resource.${r}`)}
+        </span>
+      ))}
+    </>
+  );
+}
+
 /** The piece costs as a table, with what each is worth in points; one component for the Costs sheet (a player's own, role included) and the rules (the base ones). */
 export function CostTable({ costs }: { costs: CostRows }) {
   const t = useT();
@@ -51,11 +65,7 @@ export function CostTable({ costs }: { costs: CostRows }) {
           <tr key={k} data-cost={k}>
             <th scope="row">{label}</th>
             <td>
-              {RESOURCES.filter((r) => costs[k][r] > 0).map((r) => (
-                <span key={r} className="cost-item">
-                  <ResourceIcon resource={r} size={20} /> {costs[k][r]} {t(`resource.${r}`)}
-                </span>
-              ))}
+              <CostItems hand={costs[k]} />
             </td>
             <PointsCell kind={k} />
           </tr>

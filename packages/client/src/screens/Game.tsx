@@ -22,6 +22,7 @@ import { CostsSheet, DiscardSheet, LogSheet, StealSheet } from './sheets/InfoShe
 import { DevCardsSheet } from './sheets/DevCardsSheet';
 import { GameOverSheet, endedByTime } from './sheets/GameOverSheet';
 import { TradeSheet } from './sheets/TradeSheet';
+import { BuildSheet } from './sheets/BuildSheet';
 
 /** px at the top of the board that stay free for the dice resting in the corner */
 const DICE_INSET = 52;
@@ -121,7 +122,7 @@ export function GameScreen() {
   const closeSheet = () => setSheet(null);
 
   /* notices (an open offer): shown on every surface that can cover the game, see game/notices.ts */
-  const surface: Surface = { sheet: sheet === 'trade' || sheet === 'cards' || sheet === 'costs' || sheet === 'log' ? sheet : null, tradeTab };
+  const surface: Surface = { sheet, tradeTab };
   const openNotice = () => {
     setTradeTab('players');
     setSheet('trade');
@@ -206,6 +207,18 @@ export function GameScreen() {
 
       {controls.forced === 'discard' && !roll.rolling && <DiscardSheet view={view} legal={legal} send={send} />}
       {controls.forced === 'steal' && !roll.rolling && <StealSheet view={view} legal={legal} send={send} />}
+      {!controls.forced && sheet === 'build' && (
+        <BuildSheet
+          view={view}
+          controls={controls}
+          onClose={closeSheet}
+          onPick={(piece) => {
+            setSheet(null);
+            setMode({ kind: 'build', piece });
+            setPick(null);
+          }}
+        />
+      )}
       {!controls.forced && sheet === 'trade' && <TradeSheet view={view} legal={legal} onClose={closeSheet} send={send} tab={tradeTab} onTab={setTradeTab} />}
       {!controls.forced && sheet === 'cards' && <DevCardsSheet view={view} legal={legal} onClose={closeSheet} onBuy={() => void send({ type: 'buyDevCard' })} send={send} />}
       {!controls.forced && sheet === 'costs' && <CostsSheet view={view} onClose={closeSheet} />}

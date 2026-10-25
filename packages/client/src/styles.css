@@ -1215,6 +1215,61 @@ select {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
+/* the main row holds the build button and "buy a card" */
+.actions-grid:not(.small) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.build-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.build-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.build-pick {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.build-pick[aria-disabled='true'] {
+  opacity: 0.5;
+}
+.build-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+.build-cost {
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.build-reason {
+  margin: 4px 2px 0;
+  font-size: 12px;
+  color: var(--accent);
+}
+.build-rule {
+  margin: 4px 2px 0;
+}
 .actions-grid.small {
   grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
 }

@@ -1,11 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { blockMoment, blockedNow, type BlockedNote, type BuildKind, type Control, type GameControls, type Mode } from '../game/controls';
+import { blockMoment, blockedNow, type BlockedNote, type Control, type GameControls, type Mode } from '../game/controls';
 import { useT } from '../i18n/context';
-import type { MessageKey } from '../i18n';
 import { DeckInfoButton } from './DeckInfo';
 import { reasonText, shortReason } from './reasons';
 
-export type SheetName = 'trade' | 'cards' | 'costs' | 'log';
+export type SheetName = 'build' | 'trade' | 'cards' | 'costs' | 'log';
 
 interface Props {
   controls: GameControls;
@@ -74,20 +73,9 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
   const placing = intent !== null;
   const canCancel = mode.kind !== 'none';
 
-  const buildBtn = (piece: BuildKind) => (
-    <ActionButton
-      key={piece}
-      id={piece}
-      label={t(`game.action.${piece}` as MessageKey)}
-      control={controls.build[piece]}
-      sub={shortReason(t, controls.build[piece].reason)}
-      onBlocked={block}
-      onClick={() => {
-        setBlocked(null);
-        onMode({ kind: 'build', piece });
-      }}
-    />
-  );
+  /* the build button opens the sheet whenever building is possible at all (a turn, the main phase); each row of the sheet says for itself why it is off */
+  const gate = Object.values(controls.build).find((c) => c.reason && (c.reason.code === 'notYourTurn' || c.reason.code === 'phase'));
+  const buildControl: Control = gate ? { enabled: false, reason: gate.reason } : { enabled: true, reason: null };
 
   return (
     <section className="dock" aria-label={t('hand.title')}>
@@ -138,9 +126,16 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
               </div>
             )}
             <div className="actions-grid">
-              {buildBtn('road')}
-              {buildBtn('settlement')}
-              {buildBtn('city')}
+              <ActionButton
+                id="build"
+                label={t('game.action.build')}
+                control={buildControl}
+                onBlocked={block}
+                onClick={() => {
+                  setBlocked(null);
+                  onSheet('build');
+                }}
+              />
               <ActionButton
                 id="buy"
                 label={t('game.action.buy')}

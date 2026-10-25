@@ -71,7 +71,7 @@ for (const [size, viewport] of [['mobile', MOBILE], ['desktop', DESKTOP]] as con
         if (!moved) await who.page.waitForTimeout(100);
       }
       if (await who.can('road')) {
-        await who.action('road').click();
+        await who.startBuild('road');
         await who.tap('.spot-edge');
         await shot(who.page, '18-build-road', size);
         await who.action('cancel').click();

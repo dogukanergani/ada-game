@@ -88,10 +88,9 @@ async function enterRoadMode(seat: Seat) {
   if (!(await seat.can('road'))) {
     const hand = JSON.stringify(await seat.hand());
     const hint = await seat.page.locator('p.hint').first().innerText();
-    const sub = await seat.page.locator('[data-action="road"]').innerText();
-    throw new Error(`the road button is off: hand=${hand} hint="${hint}" button="${sub.replace(/s+/g, ' ')}" phase=${await seat.page.locator('.game').getAttribute('data-phase')}`);
+    throw new Error(`the road row is off: hand=${hand} hint="${hint}" phase=${await seat.page.locator('.game').getAttribute('data-phase')}`);
   }
-  await seat.action('road').click();
+  await seat.startBuild('road');
   await expect(seat.page.locator('.spot-edge').first()).toBeVisible();
 }
 

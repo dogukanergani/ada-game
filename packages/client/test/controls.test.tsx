@@ -6,6 +6,7 @@ import { dictionaries, translate, type MessageKey } from '../src/i18n';
 import { describeError } from '../src/i18n/format';
 import type { GameError } from '@ada/protocol';
 import { I18nProvider } from '../src/i18n/context';
+import { BuildSheet } from '../src/screens/sheets/BuildSheet';
 import { DevCardsSheet } from '../src/screens/sheets/DevCardsSheet';
 import { DiscardSheet, StealSheet } from '../src/screens/sheets/InfoSheets';
 import { TradeSheet } from '../src/screens/sheets/TradeSheet';
@@ -110,15 +111,31 @@ describe('controls: the main phase', () => {
     expect(settlement.intent!.action({ kind: 'vertex', id: 2 })).toEqual({ type: 'placeSettlement', vertex: 2 });
   });
 
-  it('the dock renders each disabled button as disabled with its reason, and an enabled one as enabled', () => {
+  it('the dock has one build button in place of the three piece buttons, on during the mover\'s main phase', () => {
     const html = dock(c);
-    for (const piece of ['road', 'settlement', 'city'] as const) {
-      expect(tagOf(html, piece)).toContain(`aria-disabled="${!c.build[piece].enabled}"`);
-    }
+    expect(tagOf(html, 'build')).toContain('aria-disabled="false"');
+    for (const piece of ['road', 'settlement', 'city']) expect(html).not.toContain(`data-action="${piece}"`);
     expect(tagOf(html, 'end')).toContain('aria-disabled="false"');
-    const off = (['road', 'settlement', 'city'] as const).find((p) => !c.build[p].enabled && c.build[p].reason?.code === 'missing');
-    if (off) expect(html).toContain('action-sub');
+    // out of turn the build button is off, and tapping it explains why (the ActionButton keeps that)
+    const other = m.state.players.find((p) => p.id !== mover)!.id;
+    const out = controlsFor(m.of(other).view, m.of(other).legal);
+    expect(tagOf(dock(out), 'build')).toContain('aria-disabled="true"');
   });
+
+  it('the build sheet lists the three pieces with their costs; a row is on exactly as the controls say, with the reason under it when off', () => {
+    const html = render(<BuildSheet view={view} controls={c} onPick={noop} onClose={noop} />);
+    for (const piece of ['road', 'settlement', 'city'] as const) {
+      const tag = new RegExp(`<button[^>]*data-build="${piece}"[^>]*>`).exec(html)![0];
+      expect(tag, piece).toContain(`aria-disabled="${!c.build[piece].enabled}"`);
+      expect(html).toContain(`data-info="${piece}"`);
+      const reason = c.build[piece].reason;
+      if (reason?.code === 'missing') expect(html).toContain(`data-reason="${piece}"`);
+      if (c.build[piece].enabled) expect(html).not.toContain(`data-reason="${piece}"`);
+    }
+    // the rule lines are closed until a "?" is tapped
+    expect(html).not.toContain('data-rule=');
+  });
+
 
   it('a role with no ability has no demolish button, and the others do not see one out of turn', () => {
     expect(controlsFor(view, legal).demolish === null).toBe(view.players.find((p) => p.id === mover)!.role !== 'soldier');

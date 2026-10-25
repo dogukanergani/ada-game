@@ -16,12 +16,32 @@ export class Seat {
     return this.page.locator(`[data-action="${id}"]`);
   }
 
-  /** true when the action button exists and is not marked disabled */
+  /** true when the action button exists and is not marked disabled; for a piece (road, settlement, city) it looks at its row of the build sheet */
   async can(id: string): Promise<boolean> {
+    if (id === 'road' || id === 'settlement' || id === 'city') return this.canBuild(id);
     const b = this.action(id);
     if ((await b.count()) === 0) return false;
     // a button that goes away between the count and the read (the screen was updated) is simply not there any more
     return b.first().getAttribute('aria-disabled', { timeout: 1000 }).then((v) => v !== 'true', () => false);
+  }
+
+  /** opens the build sheet, reads whether the piece's row is on, and closes the sheet again */
+  async canBuild(piece: 'road' | 'settlement' | 'city'): Promise<boolean> {
+    if (!(await this.can('build'))) return false;
+    await this.action('build').click();
+    const row = this.page.locator(`[data-build="${piece}"]`);
+    await row.waitFor();
+    const on = (await row.getAttribute('aria-disabled')) !== 'true';
+    await this.page.getByRole('button', { name: 'Kapat' }).click();
+    await this.page.getByRole('dialog').waitFor({ state: 'detached' });
+    return on;
+  }
+
+  /** the build sheet's way in: tap "İnşa", then the piece; the board then asks for a spot */
+  async startBuild(piece: 'road' | 'settlement' | 'city') {
+    await this.action('build').click();
+    await this.page.locator(`[data-build="${piece}"]`).click();
+    await this.page.getByRole('dialog').waitFor({ state: 'detached' });
   }
 
   async hand(): Promise<Record<string, number>> {
@@ -205,7 +225,7 @@ export async function takeTurn(seats: Seat[], seat: Seat, opts: { build?: boolea
   if (opts.build !== false && (await seat.action('end').count()) > 0) {
     for (const piece of ['city', 'settlement', 'road'] as const) {
       if (await seat.can(piece)) {
-        await seat.action(piece).click();
+        await seat.startBuild(piece);
         await seat.tap(piece === 'road' ? '.spot-edge' : '.spot-vertex');
         await seat.confirm();
         built = piece;

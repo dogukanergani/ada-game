@@ -16,7 +16,7 @@ test('the amber "not your turn" line is gone once the turn is yours', async ({ b
   const second = seats.find((s) => s !== first)!;
 
   // not the second player's turn: tap a button that is off
-  await second.action('road').click({ force: true });
+  await second.action('build').click({ force: true });
   const line = second.page.locator('.hint.blocked');
   await expect(line).toBeVisible();
   await expect(line).toContainText('Sıra sende değil');
