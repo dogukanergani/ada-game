@@ -18,6 +18,7 @@ import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
 import { LogList } from '../ui/LogList';
 import { LastEvent } from '../ui/LastEvent';
 import { Seats } from '../ui/Seats';
+import { ProductionFlights } from '../ui/ProductionFlights';
 import { CostsSheet, DiscardSheet, LogSheet, StealSheet } from './sheets/InfoSheets';
 import { DevCardsSheet } from './sheets/DevCardsSheet';
 import { GameOverSheet, endedByTime } from './sheets/GameOverSheet';
@@ -50,6 +51,7 @@ export function GameScreen() {
   /* the dice picture: purely visual, it never holds back a button, a legal move or a sheet that the game itself needs (only the sheets a 7 opens wait for the dice to stop) */
   const reduced = useReducedMotion();
   const roll = useRollPresentation(state.lastRoll, state.rev, reduced);
+  const tableRef = useRef<HTMLDivElement>(null);
   const shownLog = useMemo(() => visibleLog(state.log, roll), [state.log, roll.rolling, roll.roll]); // eslint-disable-line react-hooks/exhaustive-deps
   const holdMine = heldBack(roll, view.me);
   const holdCounts = useMemo(
@@ -146,7 +148,7 @@ export function GameScreen() {
         <TimerBar view={view} clock={state.timerClock} />
       </header>
 
-      <div className="game-table" data-players={view.players.length}>
+      <div className="game-table" data-players={view.players.length} ref={tableRef}>
         <Seats view={view} connected={connected} holdBack={holdCounts} which="opponents" />
         <div className="game-board" onPointerDownCapture={roll.skip}>
         <Board
@@ -161,6 +163,7 @@ export function GameScreen() {
         <DiceTray dice={view.dice} stage={roll.stage} />
         </div>
         <Seats view={view} connected={connected} holdBack={holdCounts} which="me" />
+        <ProductionFlights view={view} roll={roll.roll} active={roll.highlight} reduced={reduced} host={tableRef} />
       </div>
 
       <div className="game-dock">
