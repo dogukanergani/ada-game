@@ -1,4 +1,4 @@
-# Ada: Oyun Tasarım Dokümanı (GDD) v0.5
+# Ada: Oyun Tasarım Dokümanı (GDD) v0.6
 
 22 Ekim 2026
 
@@ -119,7 +119,7 @@ Ada 19 altıgenden oluşur (yarıçap 2); toplam 54 köşe (yerleşim noktası) 
 - Şehir, kendi yerleşiminin yükseltilmesidir.
 - Parça limitleri: 15 yol, 5 yerleşim, 4 şehir.
 
-**Takas.** Banka 4'e 1 verir (liman ve bazı roller oranı düşürür). Oyuncular arası takasta yalnızca sıradaki oyuncu teklif verir, diğerleri kabul eder; sırası gelmeyenler birbiriyle takas yapamaz. Aynı anda tek açık teklif bulunur; yeni teklif eskisinin yerine geçer, tur bitince açık teklif silinir.
+**Takas.** Banka 4'e 1 verir (liman ve bazı roller oranı düşürür). Oyuncular arası takasta yalnızca sıradaki oyuncu teklif verir, diğerleri kabul eder; sırası gelmeyenler birbiriyle takas yapamaz. Aynı anda tek açık teklif bulunur; yeni teklif eskisinin yerine geçer, tur bitince açık teklif silinir. Teklifin bir tarafı boş bırakılabilir: karşılıksız verme ya da karşılıksız isteme mümkündür (ör. bir ittifak ortağına hediye); iki taraf birden boş olamaz.
 
 | Parça | Maliyet | Puan |
 | --- | --- | --- |
@@ -267,7 +267,7 @@ Tahta bir **deniz haritası** gibi görünür: koyu deniz zemini, ince enlem-boy
 - **Giriş:** isim, oda kur, kodla katıl.
 - **Lobi:** oda kodu, oyuncular, rol kartları.
 - **Oyun:** ortada tahta, tahtanın etrafında oyuncu koltukları (avatar, zafer puanı, kart sayısı), üstte son olay, altta el ve eylemler; masaüstünde sağda yan panel ve günlük. Koltuklarda yalnızca toplam kart sayısı görünür, rakibin hangi kaynaklara sahip olduğu gizli kalır.
-- **Alt sayfalar:** takas (yan yana: solda verirsin, sağda alırsın), maliyet tablosu, kart atma, kart çalma, günlük, oyun sonu.
+- **Alt sayfalar:** inşa (yol/yerleşim/şehir tek bir alt menüde, her birinin yanında maliyet ve kısa kural açıklaması), takas (yan yana: solda verirsin, sağda alırsın), maliyet tablosu, kart atma, kart çalma, günlük, oyun sonu.
 
 **Etkileşim ilkeleri**
 
@@ -282,7 +282,7 @@ Tahta bir **deniz haritası** gibi görünür: koyu deniz zemini, ince enlem-boy
 Hedef, hareketin yalnızca olanı anlatması: oyuncunun yaptığı eyleme cevap veren kısa animasyonlar olur, kendiliğinden oynayan süs hareketi olmaz. Ses efektleri ve müzik oyunun parçasıdır; çekirdek ve istemci hazır olduktan sonra eklenir.
 
 - **Zar:** tahtada iki zar olarak kısa (yaklaşık bir saniye) yuvarlanır; durana kadar toplam yazılmaz, sonra köşede durağan kalır. Sonucu animasyon değil sunucu belirler; sayfa yenilenince zarlar animasyonsuz gelir (Aşama 4).
-- **Üretim:** Sayısı tutan bölgelerin jetonu kısa süre vurgulanır, haydutla engelli bölge işaretlenir; kendi elindeki kaynak çipinde kazanç "+1" olarak belirir. Kimin ne aldığı günlükte yazılır. Eline uçan kaynak animasyonu sonraya kaldı (Aşama 4).
+- **Üretim:** Sayısı tutan bölgelerin jetonu kısa süre vurgulanır, haydutla engelli bölge işaretlenir; kazanılan kaynak, bölgeden kazanan oyuncunun koltuğuna kısa bir uçuşla gider ve kendi elindeki kaynak çipinde kazanç "+1" olarak belirir. Kimin ne aldığı günlükte yazılır. Hareket azaltma ayarı açıksa uçuş olmadan anında güncellenir.
 - **İnşa:** Yapı yerine oturur, kısa bir vurgu halkası.
 - **Sıra bildirimi:** Sıra sende olduğunda titreşim ve ses (uygulamada Capacitor ile, tarayıcıda sekme başlığı).
 - **Ses:** Efektler kısık ve sade kalır, müzik arka planda çalar; ikisi ayrı ayrı kapatılır. Varsayılan olarak ikisi de açıktır.
@@ -323,7 +323,7 @@ Her kural değişikliği, aşağıdaki katmanların hepsinden geçmeden bitmiş 
 
 Kapılar aşamaları sıraya koyar: çekirdek testlerden geçmeden sunucuya, telefonda oyun bitmeden kapalı teste, roller dengelenmeden yayına geçilmez.
 
-**Durum (22 Ekim 2026):** 1. aşama (çekirdek), 2. aşama (sunucu) ve 3. aşama (istemci) tamamlandı; birinci kapı geçti. İkinci kapı otomatik testlerle (iki mobil tarayıcı bağlamı, kısa oyun baştan sona) geçti; gerçek telefonda iki oyuncuyla kısa oyun denendi, sonuna kadar oynanmadı. Aşama 4 (zar görseli, üretim vurgusu, takas ekranı) tamamlandı; gerçek oyun geri bildirimiyle Aşama 5 (takas düzeni, oyuncu koltukları, Asker yıkımı) başlıyor. Kapalı test için 3 oyunculu ve sonuna kadar oynanan bir gerçek oyun, Asker denemesi ve Bilge ile Asker dengesi bekleniyor.
+**Durum (25 Ekim 2026):** 1-4. aşamalar tamamlandı. Kapalı test başladı: 2 oyunculu, Özel modda (5 puan) ilk tam oyun oynanıp bitirildi. Zamanlı mod ve Özel hedef puan eklendi (v0.5). Devam eden geri bildirim: inşa alt menüsü, üretim uçuş animasyonu, karşılıksız takas (v0.6). Bekleyen: 3+ oyunculu tam oyun, Asker ve Bilge dengesinin gerçek oyunla doğrulanması.
 
 **Sonraki sürümler (haritada yok):** hesap sistemi (e-posta, Google, Apple; arkadaş listesi ve istatistikler), ses ve müzik, özel haritalar ve sıralamalı online eşleştirme. Çeviri altyapısı ise haritadaki ilk aşamadan itibaren kurulur.
 
