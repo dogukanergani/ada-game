@@ -13,5 +13,6 @@ CLAUDE.md
 docs/*
 !docs/GDD.md
 !docs/DECISIONS.md
+!docs/DEPLOY.md
 .claude/
 reference/
