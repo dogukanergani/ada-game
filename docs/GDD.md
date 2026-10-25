@@ -176,7 +176,7 @@ Her oyuncu lobide bir rol seçer, seçmeyene kalan rollerden biri rastgele veril
 | Asker | Aktif | Belli kaynakları ödeyerek rakibin bir yolunu, yerleşimini ya da şehrini yıkar (şehir yerleşime düşer) | Yıkım aksiyonu (yeni) | Rakibi geriletir, kendine kazanç sağlamaz; oyuncuyu oyundan eleme riski, ayrıntılar aşağıda |
 | Bilge | Pasif | Gelişim kartı 1 koyun ucuza gelir | devCardCost (yeni) | Şövalye ve en büyük ordu yolunu hızlandırır |
 | Denizci | Pasif | Liman oranından sonra bankayla takas oranı 1 kart daha düşer; oran 2'nin altına inmez | bankRatio | 2'ye 1'in altına inmemeli |
-| Diplomat | Pasif | Verdiği takas teklifi kabul edilince bankada stoğu olan kaynaklardan rastgele 1 kaynak alır (turda en fazla 1 kez; seçim yok) | onTradeAccepted (yeni) | Takasları teşvik eder; kötüye kullanıma karşı turda 1 sınırı |
+| Diplomat | Pasif | Verdiği takas teklifi kabul edilince bankada stoğu olan kaynaklardan rastgele 1 kaynak alır (turda en fazla 1 kez; seçim yok). Yalnızca karşılıklı tekliflerde çalışır (hem verme hem isteme dolu); karşılıksız (tek taraflı, hediye) teklif kabul edilirse bonus almaz ve tur sayacı artmaz, aksi halde Diplomat her tur bedavaya bir kart hediye edip garantili bonus kazanabilirdi | onTradeAccepted (yeni) | Takasları teşvik eder; kötüye kullanıma karşı turda 1 sınırı |
 | Hasatçı | Pasif | Kendi zar atışında zar hiçbir yapısına denk gelmezse ve elinde en çok 3 kart varsa, bankada stoğu olan kaynaklardan rastgele 1 kaynak alır | onProduce | Şanssız turları yumuşatır, üretimi fazla artırmamalı |
 
 **Yedek roller.** 5. rol olarak Hasatçı seçildi; eksik kalan üretim tarafını o kapsıyor. v0'dan şu roller ileride havuza eklenebilir:

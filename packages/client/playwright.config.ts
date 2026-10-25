@@ -6,6 +6,7 @@ const DEMOLISH = 4302;
 const OFFERS = 4303;
 const OFFERS_RES = 4304;
 const TIMED = 4305;
+const FEATURES = 4306;
 
 /**
  * End-to-end tests run against the real thing: a server process that also
@@ -16,6 +17,7 @@ const TIMED = 4305;
  * player six cards of each resource (ADA_TEST_RESOURCES=6) so the Soldier's demolition can be played at once.
  * The sixth lets a host pick a 4-second turn and a 60-second game (ADA_TEST_TURN_SECONDS, ADA_TEST_GAME_SECONDS: added to the
  * lists of the lobby, test servers only) so the timed mode can be watched running out.
+ * The seventh (features) keeps the build-sheet, flight and gift specs off the shared server, so they do not shift its dice.
  * The seed belongs to the server, so every game on a server draws from one dice stream: a spec that opens many
  * games gets servers of its own (the fourth and fifth), or it would shift the dice of the specs that run after it.
  */
@@ -28,7 +30,8 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /rules-forced\.spec|timer(-shots)?\.spec|finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'play', testIgnore: /build.spec|flight.spec|gift.spec|rules-forced\.spec|timer(-shots)?\.spec|finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'features', testMatch: /build.spec|flight.spec|gift.spec/, use: { baseURL: `http://localhost:${FEATURES}` } },
     { name: 'timed', testMatch: /timer(-shots)?\.spec/, use: { baseURL: `http://localhost:${TIMED}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
     { name: 'demolish', testMatch: /demolish\.spec/, use: { baseURL: `http://localhost:${DEMOLISH}` } },
@@ -83,6 +86,14 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
       env: { PORT: String(TIMED), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261025', ADA_TEST_TURN_SECONDS: '4', ADA_TEST_GAME_SECONDS: '60', SERVER_SECRET: 'e2e-secret' },
+    },
+    {
+      command: 'npm run start -w @ada/server',
+      cwd: '../..',
+      url: `http://localhost:${FEATURES}/`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { PORT: String(FEATURES), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261026', SERVER_SECRET: 'e2e-secret' },
     },
   ],
 });

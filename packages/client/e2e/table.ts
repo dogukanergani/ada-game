@@ -187,6 +187,30 @@ export async function mover(seats: Seat[]): Promise<Seat> {
   throw new Error('nobody can move; ' + info.join(' | '));
 }
 
+/** Plays turns until the mover holds a card the other lacks and the other holds one the mover lacks; the roll has finished playing. */
+export async function playToOffer(seats: Seat[]) {
+  for (let turns = 0; turns < 60; turns++) {
+    const who = await mover(seats);
+    const other = seats.find((s) => s !== who)!;
+    await who.action('roll').click();
+    for (let i = 0; i < 20 && (await who.action('end').count()) === 0; i++) {
+      let moved = false;
+      for (const s of seats) moved = (await doForced(s)) || moved;
+      if (!moved) await who.page.waitForTimeout(100);
+    }
+    // the counts on screen are held back while the dice tumble: read them once the roll has played
+    await expect(who.page.locator('.dice-tray')).toHaveAttribute('data-stage', 'still');
+    const mine = await who.hand();
+    const theirs = await other.hand();
+    const give = Object.keys(mine).find((r) => mine[r] > 0);
+    const want = Object.keys(theirs).find((r) => theirs[r] > 0 && r !== give);
+    if (give && want) return { who, other, give, want, mine };
+    await who.action('end').click();
+    await expect(who.action('end')).toHaveCount(0);
+  }
+  throw new Error('the players never held cards the other lacked');
+}
+
 export type Built = 'city' | 'settlement' | 'road' | 'card' | 'bank' | null;
 
 /** Through the trade sheet: give the first resource the bank accepts, ask for a building material the player lacks. */
