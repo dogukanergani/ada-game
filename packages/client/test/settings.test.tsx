@@ -15,7 +15,7 @@ describe('the sound section', () => {
     expect(out).toMatch(/data-setting="sfx"[^>]*aria-checked="true"/);
     expect(out).toMatch(/type="range"[^>]*value="60"/);
     expect(out).toMatch(/data-setting="music"[^>]*aria-checked="false"[^>]*disabled/);
-    expect(out).toContain('class="switch-tag"');
+    expect(out).toContain('class="toggle-tag"');
   });
 });
 

@@ -6,13 +6,13 @@ import { useT } from '../i18n/context';
 
 function Switch({ id, label, checked, disabled, onChange, tag }: { id: string; label: string; checked: boolean; disabled?: boolean; onChange?: (v: boolean) => void; tag?: string }) {
   return (
-    <div className="switch-row">
-      <span id={`${id}-label`} className="switch-label">
+    <div className="toggle-row">
+      <span id={`${id}-label`} className="toggle-label">
         {label}
-        {tag ? <span className="switch-tag">{tag}</span> : null}
+        {tag ? <span className="toggle-tag">{tag}</span> : null}
       </span>
-      <button type="button" role="switch" className="switch" data-setting={id} aria-checked={checked} aria-labelledby={`${id}-label`} disabled={disabled} onClick={() => onChange?.(!checked)}>
-        <span className="switch-knob" aria-hidden="true" />
+      <button type="button" role="switch" className="toggle" data-setting={id} aria-checked={checked} aria-labelledby={`${id}-label`} disabled={disabled} onClick={() => onChange?.(!checked)}>
+        <span className="toggle-knob" aria-hidden="true" />
       </button>
     </div>
   );
