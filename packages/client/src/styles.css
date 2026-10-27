@@ -2167,3 +2167,88 @@ legend {
     animation: none;
   }
 }
+
+/* ---------- settings: switches and the volume slider ---------- */
+.switch-row,
+.slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap);
+}
+.switch-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.switch-tag {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  min-height: var(--tap);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 52px;
+  height: 28px;
+  margin-top: -14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--shallows);
+}
+.switch[aria-checked='true']::before {
+  background: var(--accent);
+}
+.switch-knob {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.12s;
+}
+.switch[aria-checked='true'] .switch-knob {
+  transform: translateX(24px);
+  background: #1d1300;
+}
+.switch:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.slider-row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  accent-color: var(--accent);
+}
+.slider-row input[type='range']:disabled {
+  opacity: 0.5;
+}
+.slider-row output {
+  width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .switch-knob {
+    transition: none;
+  }
+}

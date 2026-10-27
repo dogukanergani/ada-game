@@ -457,6 +457,16 @@ export const tr = {
 
   /* ---------- ayarlar ve kurallar ---------- */
   'settings.title': 'Ayarlar',
+  'settings.sound.title': 'Ses',
+  'settings.sfx': 'Ses efektleri',
+  'settings.volume': 'Ses düzeyi',
+  'settings.music': 'Müzik',
+  'settings.soon': 'Yakında',
+  'settings.device.title': 'Cihaz',
+  'settings.vibrate': 'Titreşim',
+  'settings.vibrate.hint': 'Onayladığın yerleşim, yol, şehir ve yıkımda kısa titreşir.',
+  'settings.fullscreen.enter': 'Tam ekrana gir',
+  'settings.fullscreen.exit': 'Tam ekrandan çık',
   'settings.identity.title': 'Bu cihazdaki kimlik',
   'settings.identity.body': 'Kayıtlı adını ve bu cihazın oyuncu kimliğini siler, seni giriş ekranına döndürür. Bir odadaysan odadan ayrılırsın. Dil seçimin korunur.',
   'settings.identity.reset': 'Kimliği unut ve yeniden başla',

@@ -454,6 +454,16 @@ export const en = {
 
   /* ---------- settings and rules ---------- */
   'settings.title': 'Settings',
+  'settings.sound.title': 'Sound',
+  'settings.sfx': 'Sound effects',
+  'settings.volume': 'Volume',
+  'settings.music': 'Music',
+  'settings.soon': 'Soon',
+  'settings.device.title': 'Device',
+  'settings.vibrate': 'Vibration',
+  'settings.vibrate.hint': 'A short buzz when you confirm a settlement, road, city or demolition.',
+  'settings.fullscreen.enter': 'Enter full screen',
+  'settings.fullscreen.exit': 'Exit full screen',
   'settings.identity.title': 'Identity on this device',
   'settings.identity.body': "Deletes the saved name and this device's player identity and returns you to the start screen. If you are in a room you leave it. Your language choice is kept.",
   'settings.identity.reset': 'Forget identity and start over',

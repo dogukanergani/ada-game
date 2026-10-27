@@ -3,6 +3,7 @@ import { useT } from '../../i18n/context';
 import { useApp } from '../../net/app';
 import { forgetIdentity, storage } from '../../net/storage';
 import { LanguageSwitch } from '../../ui/LanguageSwitch';
+import { DeviceSettings, SoundSettings } from '../../ui/DeviceSettings';
 import { Sheet } from '../../ui/Sheet';
 
 /** Language, and a way to forget this device's identity (leaves the room first when in one, then starts over from the entry screen). */
@@ -26,6 +27,8 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
         <h3 id="settings-lang">{t('lang.label')}</h3>
         <LanguageSwitch />
       </section>
+      <SoundSettings />
+      <DeviceSettings />
       <section className="stack" aria-labelledby="settings-identity">
         <h3 id="settings-identity">{t('settings.identity.title')}</h3>
         <p className="field-hint">{t('settings.identity.body')}</p>
