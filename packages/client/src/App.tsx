@@ -1,3 +1,4 @@
+import { useErrorSound } from './audio/reactions';
 import { I18nProvider } from './i18n/context';
 import { AppProvider, useApp } from './net/app';
 import { IncompatibleScreen, ReplacedScreen } from './ui/Gate';
@@ -9,6 +10,7 @@ import { GameScreen } from './screens/Game';
 
 function Shell() {
   const { state } = useApp();
+  useErrorSound(state.notice);
   if (state.conn === 'incompatible') return <IncompatibleScreen />;
   if (state.conn === 'replaced') return <ReplacedScreen />;
   return (

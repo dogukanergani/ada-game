@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { audio } from '../audio';
 import { blockMoment, blockedNow, type BlockedNote, type Control, type GameControls, type Mode } from '../game/controls';
 import { useT } from '../i18n/context';
 import { DeckInfoButton } from './DeckInfo';
@@ -68,7 +69,10 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
   /* a tap on a button that was off must not outlive the turn, the phase or the mode it was made in */
   const blocked = blockedNow(note, here);
   const setBlocked = (text: string | null) => setNote(text ? { text, at: here } : null);
-  const block = (c: Control) => setBlocked(c.reason ? reasonText(t, c.reason) : null);
+  const block = (c: Control) => {
+    audio.play('error');
+    setBlocked(c.reason ? reasonText(t, c.reason) : null);
+  };
   const { intent, forced, phase } = controls;
   const placing = intent !== null;
   const canCancel = mode.kind !== 'none';

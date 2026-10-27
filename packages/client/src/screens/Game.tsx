@@ -5,6 +5,7 @@ import { NO_MODE, demolishPieces, controlsFor, type Mode } from '../game/control
 import { defaultTab } from '../game/tradeView';
 import { titleFor, type Surface } from '../game/notices';
 import { heldBack, heldTotal, useReducedMotion, useRollPresentation, visibleLog } from '../game/roll';
+import { useGameSounds } from '../audio/reactions';
 import { useT } from '../i18n/context';
 import { useApp } from '../net/app';
 import { ActionDock, type SheetName } from '../ui/ActionDock';
@@ -53,6 +54,7 @@ export function GameScreen() {
   const roll = useRollPresentation(state.lastRoll, state.rev, reduced);
   const tableRef = useRef<HTMLDivElement>(null);
   const shownLog = useMemo(() => visibleLog(state.log, roll), [state.log, roll.rolling, roll.roll]); // eslint-disable-line react-hooks/exhaustive-deps
+  useGameSounds(state.log, view.me, roll.roll, roll.highlight);
   const holdMine = heldBack(roll, view.me);
   const holdCounts = useMemo(
     () => Object.fromEntries(view.players.map((p) => [p.id, heldTotal(heldBack(roll, p.id))])),
