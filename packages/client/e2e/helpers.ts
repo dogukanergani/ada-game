@@ -34,3 +34,13 @@ export async function shot(page: Page, name: string, size: 'mobile' | 'desktop' 
   mkdirSync(SHOTS, { recursive: true });
   await page.screenshot({ path: join(SHOTS, `${name}-${size}.png`), fullPage: false });
 }
+
+/** Opens Settings and flips "Animasyonları kapat" (the only way motion is switched off: the system setting is not followed), then closes the sheet. */
+export async function setAnimationsOff(page: Page, off = true): Promise<void> {
+  await page.getByRole('button', { name: 'Ayarlar' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Ayarlar' });
+  const sw = dialog.locator('[data-setting="animations"]');
+  if ((await sw.getAttribute('aria-checked')) !== String(off)) await sw.click();
+  await page.keyboard.press('Escape');
+  await dialog.waitFor({ state: 'detached' });
+}

@@ -20,8 +20,12 @@ describe('the sound section', () => {
 });
 
 describe('the device section', () => {
-  it('shows neither vibration nor full screen where the browser has neither', () => {
-    expect(html(<DeviceSettings vibrateSupported={false} fullscreenSupported={false} />)).toBe('');
+  it('always has the animations switch: "turn off" is unchecked by default, because motion is on by default', () => {
+    const out = html(<DeviceSettings vibrateSupported={false} fullscreenSupported={false} />);
+    expect(out).toMatch(/role="switch"[^>]*data-setting="animations"[^>]*aria-checked="false"/);
+    expect(out).toMatch(/Turn off animations/);
+    expect(out).not.toContain('data-setting="vibrate"');
+    expect(out).not.toContain('data-action="fullscreen"');
   });
   it('shows vibration (off by default) without full screen, and the reverse: each on its own', () => {
     const v = html(<DeviceSettings vibrateSupported fullscreenSupported={false} />);
@@ -33,7 +37,9 @@ describe('the device section', () => {
     expect(f).toMatch(/Enter full screen|Tam ekrana gir/);
     expect(f).not.toContain('data-setting="vibrate"');
   });
-  it('detects support from the browser by default (none in this test environment)', () => {
-    expect(html(<DeviceSettings />)).toBe('');
+  it('detects support from the browser by default (none in this test environment): only the animations switch remains', () => {
+    const out = html(<DeviceSettings />);
+    expect(out).toContain('data-setting="animations"');
+    expect(out).not.toContain('data-setting="vibrate"');
   });
 });

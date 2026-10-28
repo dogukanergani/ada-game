@@ -21,6 +21,17 @@ export function usePrefs(): Prefs {
   return useSyncExternalStore(prefs.subscribe, prefs.get, prefs.get);
 }
 
+/** Whether motion is on: the player's own choice in Settings (on by default), independent of the system's reduced-motion setting. */
+export function useAnimationsEnabled(): boolean {
+  return usePrefs().animations;
+}
+
+/** Mirrors the choice onto <html data-motion="off"> so the stylesheet can switch every animation and transition off. */
+export function applyMotionAttribute(on: boolean, root: Pick<HTMLElement, 'removeAttribute' | 'setAttribute'> = document.documentElement): void {
+  if (on) root.removeAttribute('data-motion');
+  else root.setAttribute('data-motion', 'off');
+}
+
 /** The first tap or key press unlocks the audio context (a browser refuses sound before that). Taps while the effects are off don't make one. */
 export function installUnlock(target: Pick<Document, 'addEventListener' | 'removeEventListener'> = document, a: Pick<typeof audio, 'unlock'> = audio): () => void {
   const events = ['pointerdown', 'keydown'] as const;

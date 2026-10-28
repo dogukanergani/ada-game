@@ -62,15 +62,14 @@ select {
   border-radius: 6px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
+/* "Animations off" in Settings (html[data-motion='off']); the system's reduced-motion setting is deliberately not followed (GDD v0.9) */
+:root[data-motion='off'] *,
+:root[data-motion='off'] *::before,
+:root[data-motion='off'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
 }
 
 .app {
@@ -182,6 +181,18 @@ select {
 .lang-button[aria-pressed='true'] {
   background: var(--shallows);
   font-weight: 700;
+}
+
+/* ---------- motion note (first visit, system asks for less motion) ---------- */
+.motion-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(8px + var(--safe-top)) 12px 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
 }
 
 /* ---------- toast ---------- */
@@ -1164,13 +1175,11 @@ select {
   20% { opacity: 1; transform: translateY(0) scale(1.1); }
   100% { opacity: 1; transform: translateY(-3px) scale(1); }
 }
-/* reduced motion: no movement, just a brief change of colour that the component removes again */
-@media (prefers-reduced-motion: reduce) {
-  .prod-ring,
-  .hand-gain {
-    animation: none;
-    opacity: 1;
-  }
+/* animations off: no movement, just a brief change of colour that the component removes again */
+:root[data-motion='off'] .prod-ring,
+:root[data-motion='off'] .hand-gain {
+  animation: none;
+  opacity: 1;
 }
 
 /* ---------- hand and actions ---------- */
@@ -2162,10 +2171,8 @@ legend {
     opacity: 0.45;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .timer-bar[data-urgent='true'] .timer-value {
-    animation: none;
-  }
+:root[data-motion='off'] .timer-bar[data-urgent='true'] .timer-value {
+  animation: none;
 }
 
 /* ---------- settings: switches and the volume slider ---------- */
@@ -2247,8 +2254,6 @@ legend {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
-@media (prefers-reduced-motion: reduce) {
-  .toggle-knob {
-    transition: none;
-  }
+:root[data-motion='off'] .toggle-knob {
+  transition: none;
 }

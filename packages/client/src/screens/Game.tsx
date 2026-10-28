@@ -4,7 +4,8 @@ import { Board, type Pick } from '../board/Board';
 import { NO_MODE, demolishPieces, controlsFor, type Mode } from '../game/controls';
 import { defaultTab } from '../game/tradeView';
 import { titleFor, type Surface } from '../game/notices';
-import { heldBack, heldTotal, useReducedMotion, useRollPresentation, visibleLog } from '../game/roll';
+import { heldBack, heldTotal, useRollPresentation, visibleLog } from '../game/roll';
+import { useAnimationsEnabled } from '../audio';
 import { useGameSounds } from '../audio/reactions';
 import { useT } from '../i18n/context';
 import { useApp } from '../net/app';
@@ -50,7 +51,7 @@ export function GameScreen() {
   const controls = useMemo(() => controlsFor(view, legal, mode), [view, legal, mode]);
 
   /* the dice picture: purely visual, it never holds back a button, a legal move or a sheet that the game itself needs (only the sheets a 7 opens wait for the dice to stop) */
-  const reduced = useReducedMotion();
+  const reduced = !useAnimationsEnabled();
   const roll = useRollPresentation(state.lastRoll, state.rev, reduced);
   const tableRef = useRef<HTMLDivElement>(null);
   const shownLog = useMemo(() => visibleLog(state.log, roll), [state.log, roll.rolling, roll.roll]); // eslint-disable-line react-hooks/exhaustive-deps

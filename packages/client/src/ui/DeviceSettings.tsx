@@ -44,15 +44,16 @@ export function SoundSettings() {
   );
 }
 
-/** vibration and full screen: each shows only where the browser has it, independent of each other and of the sound */
+/** animations off (always there), vibration and full screen (each only where the browser has it), independent of each other and of the sound */
 export function DeviceSettings({ vibrateSupported = canVibrate(), fullscreenSupported = canFullscreen() }: { vibrateSupported?: boolean; fullscreenSupported?: boolean }) {
   const t = useT();
   const p = usePrefs();
   const full = useFullscreen();
-  if (!vibrateSupported && !fullscreenSupported) return null;
   return (
     <section className="stack" aria-labelledby="settings-device">
       <h3 id="settings-device">{t('settings.device.title')}</h3>
+      <Switch id="animations" label={t('settings.animations')} checked={!p.animations} onChange={(v) => prefs.set({ animations: !v })} />
+      <p className="field-hint">{t('settings.animations.hint')}</p>
       {vibrateSupported && <Switch id="vibrate" label={t('settings.vibrate')} checked={p.vibrate} onChange={(v) => prefs.set({ vibrate: v })} />}
       {vibrateSupported && <p className="field-hint">{t('settings.vibrate.hint')}</p>}
       {fullscreenSupported && (

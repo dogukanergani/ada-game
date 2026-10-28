@@ -1,16 +1,18 @@
 import type { createStorage } from '../net/storage';
 
-/** The device's sound and haptics choices. Each one is stored on its own, through the same memory-backed storage as everything else. */
+/** The device's sound, haptics and motion choices. Each one is stored on its own, through the same memory-backed storage as everything else. */
 export interface Prefs {
   /** sound effects on or off */
   sfx: boolean;
   /** 0..100 */
   volume: number;
   vibrate: boolean;
+  /** motion on (the default) or off by hand; never follows the system's reduced-motion setting (GDD v0.9) */
+  animations: boolean;
 }
 
 /** sound on (GDD), a middling level; vibration off until the player turns it on (see DECISIONS) */
-export const DEFAULT_PREFS: Prefs = { sfx: true, volume: 60, vibrate: false };
+export const DEFAULT_PREFS: Prefs = { sfx: true, volume: 60, vibrate: false, animations: true };
 
 type Store = Pick<ReturnType<typeof createStorage>, 'get' | 'set'>;
 
@@ -28,6 +30,7 @@ export function loadPrefs(store: Store): Prefs {
     sfx: readBool(store, 'sfx', DEFAULT_PREFS.sfx),
     volume: clampVolume(volume),
     vibrate: readBool(store, 'vibrate', DEFAULT_PREFS.vibrate),
+    animations: readBool(store, 'animations', DEFAULT_PREFS.animations),
   };
 }
 
@@ -43,6 +46,7 @@ export function createPrefs(store: Store) {
       if (patch.sfx !== undefined) store.set('sfx', next.sfx ? '1' : '0');
       if (patch.volume !== undefined) store.set('volume', String(next.volume));
       if (patch.vibrate !== undefined) store.set('vibrate', next.vibrate ? '1' : '0');
+      if (patch.animations !== undefined) store.set('animations', next.animations ? '1' : '0');
       current = next;
       listeners.forEach((l) => l());
     },

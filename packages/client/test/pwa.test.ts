@@ -50,9 +50,11 @@ describe('what makes the page installable and phone-ready', () => {
     expect(html).not.toMatch(/serviceWorker/);
   });
 
-  it('honours reduced motion and keeps every control at least 44 px', () => {
+  it('switches motion off by hand (not by the system setting) and keeps every control at least 44 px', () => {
     const css = readFileSync(join(root, 'src', 'styles.css'), 'utf8');
-    expect(css).toContain('prefers-reduced-motion: reduce');
+    // GDD v0.9: the stylesheet follows html[data-motion='off'] (Settings), never the system's prefers-reduced-motion
+    expect(css).not.toContain('prefers-reduced-motion');
+    expect(css).toContain(":root[data-motion='off']");
     expect(css).toContain('--tap: 44px');
     expect(css).toMatch(/\.btn\s*\{[^}]*min-height:\s*var\(--tap\)/s);
     expect(css).toContain(':focus-visible');

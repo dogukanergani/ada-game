@@ -1,5 +1,5 @@
 import { expect, test } from './test';
-import { DESKTOP, MOBILE, SMALL, shot } from './helpers';
+import { DESKTOP, MOBILE, SMALL, setAnimationsOff, shot } from './helpers';
 import { doForced, mover, newTable, playSetup, startShort } from './table';
 
 const sizes = [
@@ -58,8 +58,22 @@ for (const { label, viewport } of sizes) test(`the dice: same faces for everyone
   for (let i = 0; i < 6; i++) if (!(await doForced(first))) break;
 });
 
-test('with reduced motion the result is there at once', async ({ browser }) => {
+test('the system reduced-motion setting no longer matters: the dice still tumble', async ({ browser }) => {
   const { seats } = await newTable(browser, ['Ayşe', 'Çağlar'], undefined, (page) => void page.emulateMedia({ reducedMotion: 'reduce' }));
+  await startShort(seats);
+  await playSetup(seats);
+  const first = await mover(seats);
+  await expect(first.page.locator('html')).not.toHaveAttribute('data-motion', 'off');
+  await first.action('roll').click();
+  await expect(first.page.locator('.dice-stage')).toHaveAttribute('data-stage', 'rolling');
+  await expect(first.page.locator('.dice [data-total]')).toHaveCount(0);
+  await expect(first.page.locator('.dice-tray')).toHaveAttribute('data-stage', 'still', { timeout: 5000 });
+});
+
+test('with the animations turned off in Settings the result is there at once', async ({ browser }) => {
+  const { seats } = await newTable(browser, ['Ayşe', 'Çağlar']);
+  for (const s of seats) await setAnimationsOff(s.page);
+  await expect(seats[0]!.page.locator('html')).toHaveAttribute('data-motion', 'off');
   await startShort(seats);
   await playSetup(seats);
   const first = await mover(seats);

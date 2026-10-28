@@ -100,3 +100,66 @@ for (const [size, viewport] of [['mobile', MOBILE], ['small', SMALL], ['desktop'
     await shot(page, '44-settings-extended', size);
   });
 }
+
+test('settings: "Animasyonları kapat" starts off (animations on), switches motion off and on, and survives a reload', async ({ browser }) => {
+  const { page } = await openPlayer(browser, MOBILE, 'tr-TR', support(false, false));
+  let dialog = await open(page);
+  const sw = dialog.locator('[data-setting="animations"]');
+  await expect(sw).toHaveAttribute('role', 'switch');
+  await expect(sw).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('html')).not.toHaveAttribute('data-motion', 'off');
+  expect(await page.evaluate(() => localStorage.getItem('ada.animations'))).toBeNull();
+
+  await sw.click();
+  await expect(sw).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
+  expect(await page.evaluate(() => localStorage.getItem('ada.animations'))).toBe('0');
+  // the stylesheet switches every transition off, the switch's own knob included
+  const knob = await page.locator('.toggle-knob').first().evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
+  expect(knob).toBeLessThan(0.001);
+
+  await page.reload();
+  dialog = await open(page);
+  await expect(dialog.locator('[data-setting="animations"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
+  await dialog.locator('[data-setting="animations"]').click();
+  await expect(page.locator('html')).not.toHaveAttribute('data-motion', 'off');
+  expect(await page.evaluate(() => localStorage.getItem('ada.animations'))).toBe('1');
+});
+
+test('motion note: shown once, only when the system asks for less motion and nothing is chosen; the system setting itself changes nothing', async ({ browser }) => {
+  const reduce = (p: import('@playwright/test').Page) => void p.emulateMedia({ reducedMotion: 'reduce' });
+  const none = await openPlayer(browser, MOBILE, 'tr-TR', (p) => void p.emulateMedia({ reducedMotion: 'no-preference' }));
+  await expect(none.page.locator('[data-note="motion"]')).toHaveCount(0);
+
+  const { page } = await openPlayer(browser, MOBILE, 'tr-TR', reduce);
+  const note = page.locator('[data-note="motion"]');
+  await expect(note).toBeVisible();
+  await expect(note).toContainText('Cihazında hareketi azaltma açık');
+  await expect(page.locator('html')).not.toHaveAttribute('data-motion', 'off');
+  await shot(page, '46-motion-note', 'mobile');
+  await note.locator('[data-action="dismiss-motion-note"]').click();
+  await expect(note).toHaveCount(0);
+  expect(await page.evaluate(() => [localStorage.getItem('ada.motionNote'), localStorage.getItem('ada.animations')])).toEqual(['1', null]);
+  await page.reload();
+  await expect(page.locator('.app')).toBeVisible();
+  await expect(note).toHaveCount(0);
+
+  // a saved choice also silences it
+  const chosen = await openPlayer(browser, MOBILE, 'tr-TR', (p) => {
+    reduce(p);
+    void p.addInitScript(() => localStorage.setItem('ada.animations', '1'));
+  });
+  await expect(chosen.page.locator('.app')).toBeVisible();
+  await expect(chosen.page.locator('[data-note="motion"]')).toHaveCount(0);
+});
+
+for (const [size, viewport] of [['mobile', MOBILE], ['small', SMALL], ['desktop', DESKTOP]] as const) {
+  test(`screenshots of the animations switch (${size})`, async ({ browser }) => {
+    const { page } = await openPlayer(browser, viewport, 'tr-TR', support(false, false));
+    const dialog = await open(page);
+    await shot(page, '45-settings-animations', size);
+    await dialog.locator('[data-setting="animations"]').click();
+    await shot(page, '45-settings-animations-off', size);
+  });
+}

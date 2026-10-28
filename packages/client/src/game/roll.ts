@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { RESOURCES, type Hand } from '@ada/game-core';
 import type { LogEntry, RollRecord } from '../net/store';
 
@@ -33,20 +33,6 @@ export interface RollPresentation {
   skip: () => void;
 }
 
-/** `(prefers-reduced-motion: reduce)` as a live value */
-export function useReducedMotion(): boolean {
-  const query = () => (typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null);
-  const [reduced, setReduced] = useState(() => query()?.matches ?? false);
-  useEffect(() => {
-    const q = query();
-    if (!q) return;
-    const on = () => setReduced(q.matches);
-    q.addEventListener?.('change', on);
-    return () => q.removeEventListener?.('change', on);
-  }, []);
-  return reduced;
-}
-
 export interface Run {
   roll: RollRecord;
   startRev: number;
@@ -64,7 +50,7 @@ export type RollAction =
 /**
  * The stages as a pure state machine (the hook below only adds timers). A roll
  * is replaced by a newer one; any later payload or a skip ends it at once; with
- * reduced motion it starts at rest, with the result showing.
+ * animations off it starts at rest, with the result showing.
  */
 export function rollMachine(run: Run | null, a: RollAction): Run | null {
   switch (a.t) {
@@ -131,6 +117,13 @@ export function useRollPresentation(lastRoll: RollRecord | null, rev: number, re
     const seq = run.roll.seq;
     timers.current.push(setTimeout(() => dispatch({ t: 'highlightOff', seq }), HIGHLIGHT_MS));
   }, [clear, run]);
+
+  /** switching the animations off while a roll is playing ends it now, as a tap would */
+  const skipRef = useRef(skip);
+  skipRef.current = skip;
+  useEffect(() => {
+    if (reduced) skipRef.current();
+  }, [reduced]);
 
   return { stage: run?.stage ?? 'still', rolling: run?.stage === 'rolling', roll: run?.roll ?? null, highlight: run?.highlight ?? false, skip };
 }

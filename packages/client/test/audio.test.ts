@@ -177,19 +177,20 @@ describe('what each event sounds like', () => {
 });
 
 describe('preferences', () => {
-  it('start at sound on, a middling volume and vibration off', () => {
-    expect(DEFAULT_PREFS).toEqual({ sfx: true, volume: 60, vibrate: false });
+  it('start at sound on, a middling volume, vibration off and animations on', () => {
+    expect(DEFAULT_PREFS).toEqual({ sfx: true, volume: 60, vibrate: false, animations: true });
     expect(loadPrefs(createStorage(() => memoryBackend()))).toEqual(DEFAULT_PREFS);
   });
   it('persist in storage and come back; a bad value falls back', () => {
     const backend = memoryBackend();
     const p = createPrefs(createStorage(() => backend));
-    p.set({ sfx: false, volume: 35, vibrate: true });
-    expect([backend.m.get('ada.sfx'), backend.m.get('ada.volume'), backend.m.get('ada.vibrate')]).toEqual(['0', '35', '1']);
-    expect(loadPrefs(createStorage(() => backend))).toEqual({ sfx: false, volume: 35, vibrate: true });
+    p.set({ sfx: false, volume: 35, vibrate: true, animations: false });
+    expect([backend.m.get('ada.sfx'), backend.m.get('ada.volume'), backend.m.get('ada.vibrate'), backend.m.get('ada.animations')]).toEqual(['0', '35', '1', '0']);
+    expect(loadPrefs(createStorage(() => backend))).toEqual({ sfx: false, volume: 35, vibrate: true, animations: false });
     backend.m.set('ada.volume', 'loud');
     backend.m.set('ada.sfx', 'x');
-    expect(loadPrefs(createStorage(() => backend))).toMatchObject({ sfx: true, volume: 60 });
+    backend.m.set('ada.animations', 'maybe');
+    expect(loadPrefs(createStorage(() => backend))).toMatchObject({ sfx: true, volume: 60, animations: true });
     p.set({ volume: 400 });
     expect(p.get().volume).toBe(100);
   });

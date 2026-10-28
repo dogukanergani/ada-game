@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './test';
-import { DESKTOP, MOBILE, SMALL, shot } from './helpers';
+import { DESKTOP, MOBILE, SMALL, setAnimationsOff, shot } from './helpers';
 import { doForced, mover, newTable, playSetup, startShort, type Seat } from './table';
 
 /**
@@ -80,11 +80,13 @@ async function rollUntilProduces(seats: Seat[]): Promise<Seat> {
   throw new Error('no roll in 40 turns produced anything');
 }
 
-async function table(browser: import('@playwright/test').Browser, viewport = MOBILE, reduced = false) {
+/** 'system': the browser reports reduced motion (which must change nothing); 'off': the players turned the animations off in Settings */
+async function table(browser: import('@playwright/test').Browser, viewport = MOBILE, mode: 'on' | 'system' | 'off' = 'on') {
   const { seats } = await newTable(browser, ['Ayşe', 'Çağlar'], viewport, (page) => {
     track(page);
-    if (reduced) void page.emulateMedia({ reducedMotion: 'reduce' });
+    if (mode === 'system') void page.emulateMedia({ reducedMotion: 'reduce' });
   });
+  if (mode === 'off') for (const s of seats) await setAnimationsOff(s.page);
   await startShort(seats);
   await playSetup(seats);
   return seats;
@@ -119,8 +121,17 @@ for (const zoomed of [false, true]) {
   });
 }
 
-test('production flight: with reduced motion nothing flies and the tiles are still marked', async ({ browser }) => {
-  const seats = await table(browser, MOBILE, true);
+test('production flight: the system reduced-motion setting no longer matters, the cards still fly', async ({ browser }) => {
+  const seats = await table(browser, MOBILE, 'system');
+  const who = await rollUntilProduces(seats);
+  await who.page.waitForFunction(() => (window as unknown as { __fl: unknown[] }).__fl.length > 0, null, { timeout: 4000 });
+  await who.page.waitForTimeout(1500);
+  expect((await seen(who.page)).length).toBeGreaterThan(0);
+  await finishTurn(seats, who);
+});
+
+test('production flight: with the animations turned off in Settings nothing flies and the tiles are still marked', async ({ browser }) => {
+  const seats = await table(browser, MOBILE, 'off');
   const who = await rollUntilProduces(seats);
   await who.page.waitForTimeout(1800);
   for (const s of seats) expect(await seen(s.page)).toHaveLength(0);
