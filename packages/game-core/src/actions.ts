@@ -13,6 +13,8 @@ export type Action =
   | { type: 'offerTrade'; give: Partial<Hand>; want: Partial<Hand> }
   | { type: 'acceptTrade'; offerId: number }
   | { type: 'cancelTrade'; offerId: number }
+  /** Team mode: cards go to a teammate at once, whoever's turn it is and with no acceptance (not a trade offer). */
+  | { type: 'teamGift'; to: string; cards: Partial<Hand> }
   | { type: 'buyDevCard' }
   | { type: 'playKnight' }
   | { type: 'playRoadBuilding' }

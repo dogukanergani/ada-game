@@ -2,6 +2,9 @@ import type { DevCardKind, GameMode, Hand, PieceKind } from './types';
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 5;
+/** Team mode is a fixed 2v2: exactly this many players, this many on each team. */
+export const TEAM_MODE_PLAYERS = 4;
+export const TEAM_SIZE = 2;
 
 export const BASE_COSTS: Record<PieceKind, Hand> = {
   road: { lumber: 1, brick: 1, wool: 0, grain: 0, ore: 0 },

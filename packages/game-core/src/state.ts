@@ -46,6 +46,13 @@ export const topoOf = (s: Pick<GameState, 'map'>): Topology => topologyOf(s.map)
 export const getPlayer = (s: Pick<GameState, 'players'>, id: string): Player => s.players.find((p) => p.id === id)!;
 export const hasPlayer = (s: Pick<GameState, 'players'>, id: unknown): boolean => s.players.some((p) => p.id === id);
 
+/** True when both are on the same team of a team-mode game; always false in a normal game and for the same player. */
+export function sameTeam(s: Pick<GameState, 'players' | 'teamMode'>, a: string, b: string): boolean {
+  if (!s.teamMode || a === b) return false;
+  const ta = s.players.find((p) => p.id === a)?.team ?? null;
+  return ta !== null && ta === s.players.find((p) => p.id === b)?.team;
+}
+
 export function countPieces(s: Pick<GameState, 'roads' | 'buildings'>, pid: string): Record<PieceKind, number> {
   const out = { road: 0, settlement: 0, city: 0 };
   for (const o of Object.values(s.roads)) if (o === pid) out.road++;

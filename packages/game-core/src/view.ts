@@ -8,7 +8,7 @@ import { costFor, devCardCostFor } from './validate';
 import {
   RESOURCES,
   type Building, type DevCardInHand, type DevCardKind, type GameMode, type GameState, type Harbor, type Hand, type Phase,
-  type PieceKind, type Resource, type RoleId, type SetupState, type Tile, type TimerConfig, type TradeOffer,
+  type PieceKind, type Resource, type RoleId, type SetupState, type Team, type Tile, type TimerConfig, type TradeOffer,
 } from './types';
 
 /** What one player may know about a seat. Secrets are `null` for everyone but the owner. */
@@ -20,6 +20,7 @@ export interface PlayerView {
   handCount: number;
   devCardCount: number;
   knightsPlayed: number;
+  team: Team | null;
   /** points everyone can see (no hidden cards) */
   points: number;
   roadLength: number;
@@ -37,6 +38,11 @@ export interface GameView {
   me: string;
   mode: GameMode;
   vpToWin: number;
+  teamMode: boolean;
+  /** points a team needs (twice vpToWin), null when not in team mode */
+  teamTarget: number | null;
+  /** team mode: each team's points as this viewer may know them (public points, plus the viewer's own victory point cards; everything once the game is over) */
+  teamPoints: Record<Team, number> | null;
   map: MapDef;
   tiles: Tile[];
   harbors: Harbor[];
@@ -72,6 +78,14 @@ export interface GameView {
   } | null;
 }
 
+function viewTeamPoints(state: GameState, viewer: string, finished: boolean): Record<Team, number> {
+  const out: Record<Team, number> = { A: 0, B: 0 };
+  for (const p of state.players) {
+    out[p.team!] += publicPoints(state, p.id) + (finished || p.id === viewer ? hiddenPoints(state, p.id) : 0);
+  }
+  return out;
+}
+
 export function viewFor(state: GameState, playerId: string): GameView {
   const finished = state.phase === 'finished';
   const seated = state.players.some((p) => p.id === playerId);
@@ -79,6 +93,9 @@ export function viewFor(state: GameState, playerId: string): GameView {
     me: playerId,
     mode: state.mode,
     vpToWin: state.vpToWin,
+    teamMode: state.teamMode,
+    teamTarget: state.teamTarget,
+    teamPoints: state.teamMode ? viewTeamPoints(state, playerId, finished) : null,
     map: state.map,
     tiles: state.tiles,
     harbors: state.harbors,
@@ -95,6 +112,7 @@ export function viewFor(state: GameState, playerId: string): GameView {
         handCount: handCount(p.hand),
         devCardCount: p.devCards.length,
         knightsPlayed: p.knightsPlayed,
+        team: p.team,
         points: publicPoints(state, p.id),
         roadLength: longestRoadFor(state, p.id),
         hand: reveal ? p.hand : null,

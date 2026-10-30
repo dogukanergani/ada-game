@@ -1,6 +1,6 @@
 import { err } from '../events';
 import { PIECE_LIMITS } from '../constants';
-import { canAfford, countPieces, getPlayer, isInt, payToBank, topoOf } from '../state';
+import { canAfford, countPieces, getPlayer, isInt, payToBank, sameTeam, topoOf } from '../state';
 import type { Hand, PieceKind, Resource } from '../types';
 import { RESOURCES } from '../types';
 import type { RoleActionDef, RoleDef } from './types';
@@ -51,6 +51,7 @@ const demolish: RoleActionDef = {
     if (kind === 'road') owner = s.roads[id];
     else if (s.buildings[id]?.kind === kind) owner = s.buildings[id].owner;
     if (owner === undefined || owner === pid) return err('invalidTarget');
+    if (sameTeam(s, pid, owner)) return err('invalidTarget', { reason: 'teammate' });
 
     const until = s.demolishShield[owner];
     if (until !== undefined && s.turn < until) return err('roleActionRefused', { reason: 'protected', player: owner, until });

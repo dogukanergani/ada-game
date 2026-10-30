@@ -1,7 +1,7 @@
 import type { Action, ApplyResult } from './actions';
 import type { GameEvent } from './events';
 import { applyAction, cloneState, forfeitRoadBuilding } from './reducer';
-import { finishGame, totalPoints } from './scoring';
+import { finishGame, teamPoints, totalPoints } from './scoring';
 import type { Ctx } from './state';
 import { legalRobberTiles, legalStealVictims } from './validate';
 import { RESOURCES, type GameState, type Hand, type Resource, type Rng } from './types';
@@ -22,7 +22,8 @@ export function tickTimers(prev: GameState, rng: Rng, now: number): ApplyResult 
 
   if (now - prev.gameStartedAt >= timer.gameSeconds * 1000) {
     const ctx: Ctx = { s: cloneState(prev), rng, now, events: [], boardChanged: false };
-    const scores = ctx.s.players.map((p) => ({ id: p.id, points: totalPoints(ctx.s, p.id) }));
+    // in team mode a player "scores" their team's total, so the best team's members (both, or all four when level) win
+    const scores = ctx.s.players.map((p) => ({ id: p.id, points: ctx.s.teamMode ? teamPoints(ctx.s, p.team!) : totalPoints(ctx.s, p.id) }));
     const best = Math.max(...scores.map((x) => x.points));
     finishGame(ctx, scores.filter((x) => x.points === best).map((x) => x.id), best, 'time');
     return { ok: true, state: ctx.s, events: ctx.events };

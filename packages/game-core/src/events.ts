@@ -27,6 +27,8 @@ export type GameEvent =
   | { type: 'tradeOffered'; offer: TradeOffer }
   | { type: 'tradeAccepted'; offerId: number; from: string; to: string; give: Hand; want: Hand }
   | { type: 'tradeCancelled'; offerId: number }
+  /** a teammate's gift in team mode; public, like an accepted trade */
+  | { type: 'teamGifted'; from: string; to: string; cards: Hand }
   | { type: 'devCardBought'; player: string; kind: DevCardKind | null }
   | { type: 'devCardPlayed'; player: string; kind: DevCardKind }
   | { type: 'yearOfPlentyTaken'; player: string; gains: Hand }
@@ -63,6 +65,7 @@ export const GAME_EVENT_TYPES = [
   'tradeOffered',
   'tradeAccepted',
   'tradeCancelled',
+  'teamGifted',
   'devCardBought',
   'devCardPlayed',
   'yearOfPlentyTaken',

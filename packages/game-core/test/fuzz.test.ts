@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEV_CARD_KINDS, DEV_DECK_SIZE, canAfford, costFor, PIECE_LIMITS, RESOURCES, ROLE_LIST, applyAction, bankStockFor, createGame, legalBankTrades,
   legalCityVertices, legalDevPlays, legalRoadEdges, legalRobberTiles, legalRoleActions, legalSettlementVertices, legalStealVictims,
-  handCount, longestRoadFor, publicPoints, tickTimers, topologyOf, totalPoints, validate, viewFor,
+  handCount, longestRoadFor, publicPoints, teamPoints, tickTimers, topologyOf, totalPoints, validate, viewFor,
   type Action, type GameEvent, type GameMode, type GameState, type Hand, type Rng,
 } from '../src';
 import { mulberry32 } from './helpers';
@@ -100,7 +100,8 @@ function invariants(s: GameState) {
   must(s.robber >= 0 && s.robber < s.tiles.length && s.tiles[s.robber] !== undefined, 'robber tile');
   must((s.phase === 'finished') === (s.winners.length > 0), 'winners vs phase');
   must(new Set(s.winners).size === s.winners.length && s.winners.every((w) => ids.has(w)), 'bad winners list');
-  if (s.winners.length) {
+  if (s.teamMode) teamInvariants(s);
+  else if (s.winners.length) {
     const totals = s.players.map((p) => totalPoints(s, p.id));
     const top = Math.max(...totals);
     const [first] = s.winners;
@@ -120,9 +121,46 @@ function invariants(s: GameState) {
   if (s.timer) must(s.turnStartedAt !== null || s.phase === 'setup' || (s.phase === 'finished' && s.turn === 0), 'a timed game past setup has a turn clock');
   must(s.vpToWin >= 5 && s.vpToWin <= 15, 'target score out of range');
   if (s.mode !== 'custom') must(s.vpToWin === (s.mode === 'short' ? 7 : 10), 'fixed mode target changed');
-  if (s.phase !== 'finished' && s.phase !== 'setup') {
+  if (!s.teamMode && s.phase !== 'finished' && s.phase !== 'setup') {
     // nobody sits on the target during their own turn without having won
     must(totalPoints(s, s.current) < s.vpToWin, 'current player at the target but game not finished');
+  }
+}
+
+/** Team mode: the teams stay 2v2, the target is doubled, wins belong to whole teams, and the protections hold in every position. */
+function teamInvariants(s: GameState) {
+  const ids = new Set(s.players.map((p) => p.id));
+  must(s.players.length === 4 && s.players.filter((p) => p.team === 'A').length === 2 && s.players.filter((p) => p.team === 'B').length === 2, 'teams are not 2v2');
+  must(s.teamTarget === s.vpToWin * 2, 'team target is not twice the target');
+  const teamOf = (id: string) => s.players.find((p) => p.id === id)!.team;
+  if (s.winners.length) {
+    const sums = { A: teamPoints(s, 'A'), B: teamPoints(s, 'B') };
+    const members = (t: 'A' | 'B') => s.players.filter((p) => p.team === t).map((p) => p.id).sort();
+    const w = [...s.winners].sort();
+    const byTarget = w.length === 2 && teamOf(w[0]) === teamOf(w[1]) && sums[teamOf(w[0])!] >= s.teamTarget! && teamOf(w[0]) === teamOf(s.current);
+    if (byTarget) {
+      must(JSON.stringify(w) === JSON.stringify(members(teamOf(w[0])!)), 'winners are not a whole team');
+    } else {
+      // only the game time can end it otherwise: the better team, or all four when level
+      must(s.timer !== null, 'a team game without a timer ended without a team at the target');
+      const best = Math.max(sums.A, sums.B);
+      const expected = [...(sums.A === best ? members('A') : []), ...(sums.B === best ? members('B') : [])].sort();
+      must(JSON.stringify(w) === JSON.stringify(expected), 'a timed team game picked the wrong winners');
+    }
+  } else if (s.phase !== 'finished' && s.phase !== 'setup') {
+    must(teamPoints(s, teamOf(s.current)!) < s.teamTarget!, 'current team at the target but game not finished');
+  }
+  must(s.winners.every((w) => ids.has(w)), 'bad winners');
+  // protection: nobody may ever rob or demolish a teammate
+  for (const v of s.stealFrom) must(teamOf(v) !== teamOf(s.current), 'a teammate is a steal target');
+  if (s.phase === 'steal') for (const v of legalStealVictims(s, s.current)) must(teamOf(v) !== teamOf(s.current), 'a teammate is a legal steal victim');
+  if (s.phase === 'main') {
+    for (const a of legalRoleActions(s, s.current)) {
+      if (a.type !== 'roleAction' || a.name !== 'demolish') continue;
+      const { kind, id } = a.params as { kind: 'road' | 'settlement' | 'city'; id: number };
+      const owner = kind === 'road' ? s.roads[id] : s.buildings[id].owner;
+      must(teamOf(owner) !== teamOf(s.current), 'a teammate piece is a legal demolition target');
+    }
   }
 }
 
@@ -217,9 +255,10 @@ interface Stats {
   refusedProbes: number;
   timedOutTurns: number;
   endedByTime: number;
+  gifts: number;
 }
 
-const newStats = (): Stats => ({ games: 0, finished: 0, steps: 0, byType: {}, roleWins: {}, rolePlays: {}, stolen: 0, demolished: 0, blocked: 0, hits: 0, robbed: 0, refusedProbes: 0, timedOutTurns: 0, endedByTime: 0 });
+const newStats = (): Stats => ({ games: 0, finished: 0, steps: 0, byType: {}, roleWins: {}, rolePlays: {}, stolen: 0, demolished: 0, blocked: 0, hits: 0, robbed: 0, refusedProbes: 0, timedOutTurns: 0, endedByTime: 0, gifts: 0 });
 const T0 = 1_700_000_000_000;
 
 const BAD_PROBES: unknown[] = [
@@ -230,6 +269,7 @@ const BAD_PROBES: unknown[] = [
 
 /** Extra game setup for a playout: a custom target, and/or the timed mode with a fake clock that jumps forward as the bots play. */
 interface Variant {
+  teams?: boolean;
   targetScore?: number;
   timer?: { turnSeconds: number; gameSeconds: number };
 }
@@ -239,7 +279,17 @@ function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxStep
   const roles = ROLE_LIST.map((r) => r.id);
   const shift = seed % roles.length;
   const chosen = Array.from({ length: n }, (_, i) => roles[(shift + i) % roles.length]);
-  const created = createGame({ players: chosen.map((role, i) => ({ id: `p${i}`, name: `P${i}`, role })), mode, ...variant }, rng, T0);
+  const { teams, ...rest } = variant;
+  const created = createGame(
+    {
+      players: chosen.map((role, i) => ({ id: `p${i}`, name: `P${i}`, role })),
+      mode,
+      ...rest,
+      ...(teams ? { teams: Object.fromEntries(chosen.map((_, i) => [`p${i}`, i % 2 === 0 ? 'A' : 'B'])) as Record<string, 'A' | 'B'> } : {}),
+    },
+    rng,
+    T0,
+  );
   must(created.ok, 'createGame failed');
   let s = (created as { ok: true; state: GameState }).state;
   invariants(s);
@@ -285,6 +335,7 @@ function playGame(seed: number, n: number, mode: GameMode, stats: Stats, maxStep
     if (m.action.type === 'roleAction') stats.byType[`role:${m.action.name}`] = (stats.byType[`role:${m.action.name}`] ?? 0) + 1;
     checkRollTiles(s, r.events, stats);
     for (const e of r.events) {
+      if (e.type === 'teamGifted') stats.gifts++;
       if (e.type === 'stolen') stats.stolen++;
       if (e.type === 'productionBlocked') stats.blocked++;
       if (e.type === 'tradeAccepted') {
@@ -394,6 +445,25 @@ describe('random playouts', () => {
     expect(stats.endedByTime).toBeGreaterThan(3);
     expect(stats.byType.endTurn).toBeGreaterThan(0);
   }, 120_000);
+
+  it('keeps every invariant in team games (2v2), plain, timed and with the Soldier demolishing', () => {
+    const stats = newStats();
+    let seed = 12000;
+    for (const mode of ['standard', 'short', 'custom'] as GameMode[]) {
+      for (let g = 0; g < 14; g++) playGame(seed++, 4, mode, stats, 6000, moves, { teams: true, ...(mode === 'custom' ? { targetScore: 6 } : {}) });
+    }
+    for (const bot of [moves, greedyMoves]) {
+      for (let g = 0; g < 6; g++) playGame(seed++, 4, 'short', stats, 6000, bot, { teams: true });
+    }
+    const timers = [{ turnSeconds: 60, gameSeconds: 900 }, { turnSeconds: 150, gameSeconds: 5400 }];
+    for (const timer of timers) for (let g = 0; g < 10; g++) playGame(seed++, 4, 'standard', stats, 6000, moves, { teams: true, timer });
+    expect(stats.games).toBe(42 + 12 + 20);
+    expect(stats.gifts).toBeGreaterThan(100);
+    expect(stats.finished).toBeGreaterThan(40);
+    expect(stats.demolished).toBeGreaterThan(0);
+    expect(stats.endedByTime).toBeGreaterThan(0);
+    if (!stats.byType.teamGift) throw new Error('the bot never sent a gift');
+  }, 240_000);
 
   it('the same seed replays to the same final state', () => {
     const a = playGame(42, 4, 'standard', newStats(), 800);

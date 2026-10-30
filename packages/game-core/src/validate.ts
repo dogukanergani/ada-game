@@ -3,7 +3,7 @@ import { BASE_COSTS, DEV_CARD_COST, DEFAULT_DISCARD_LIMIT } from './constants';
 import { err, type GameError } from './events';
 import { roleOf } from './roles/registry';
 import {
-  canAfford, getPlayer, handCount, hasPlayer, isInt, isResource, pieceLimitReached, sanitizeHand, topoOf,
+  canAfford, getPlayer, handCount, hasPlayer, isInt, isResource, pieceLimitReached, sameTeam, sanitizeHand, topoOf,
   type ValidateOpts,
 } from './state';
 import { bankRatioFor } from './trade';
@@ -154,6 +154,29 @@ function checkOffer(s: GameState, pid: string, giveIn: unknown, wantIn: unknown)
   return null;
 }
 
+/**
+ * A teammate gift: anyone on a team may send cards to their teammate at any time (no turn needed, no limit per turn), except
+ * during setup, and not while they still owe a discard (the discard must stay payable from their hand).
+ */
+function checkTeamGift(s: GameState, pid: string, to: unknown, cardsIn: unknown): GameError | null {
+  if (!s.teamMode) return err('invalidTarget', { reason: 'noTeamMode' });
+  if (s.phase === 'setup') return phaseErr(s);
+  if (typeof to !== 'string' || !sameTeam(s, pid, to)) return err('invalidTarget', { reason: 'notTeammate' });
+  if (s.pendingDiscards[pid]) return err('wrongPhase', { phase: s.phase });
+  const cards = sanitizeHand(cardsIn);
+  if (!cards || handCount(cards) === 0) return err('invalidHand');
+  if (!canAfford(getPlayer(s, pid).hand, cards)) return err('cannotAfford', { cost: cards });
+  return null;
+}
+
+/** The teammates this player could send at least one card to right now. */
+export function legalTeamGiftTargets(s: GameState, pid: string): string[] {
+  if (s.phase === 'finished' || !hasPlayer(s, pid)) return [];
+  const have = RESOURCES.find((r) => getPlayer(s, pid).hand[r] > 0);
+  if (!have) return [];
+  return s.players.map((p) => p.id).filter((to) => validate(s, pid, { type: 'teamGift', to, cards: { [have]: 1 } }) === null);
+}
+
 function checkAccept(s: GameState, pid: string, offerId: unknown): GameError | null {
   if (s.phase !== 'main') return phaseErr(s);
   const offer = s.offers.find((o) => o.id === offerId);
@@ -236,6 +259,8 @@ export function validate(s: GameState, pid: string, a: Action, opts: ValidateOpt
       return checkBankTrade(s, pid, x.give, x.get);
     case 'offerTrade':
       return checkOffer(s, pid, x.give, x.want);
+    case 'teamGift':
+      return checkTeamGift(s, pid, x.to, x.cards);
     case 'acceptTrade':
       return checkAccept(s, pid, x.offerId);
     case 'cancelTrade':

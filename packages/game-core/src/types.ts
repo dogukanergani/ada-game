@@ -9,6 +9,10 @@ export type TileKind = Resource | 'desert';
 export type PieceKind = 'road' | 'settlement' | 'city';
 export type GameMode = 'standard' | 'short' | 'custom';
 
+/** The two fixed teams of the team mode. */
+export const TEAMS = ['A', 'B'] as const;
+export type Team = (typeof TEAMS)[number];
+
 /** Role ids are plain strings: the role list is data (see roles/defs.ts). */
 export type RoleId = string;
 
@@ -47,6 +51,8 @@ export interface Player {
   hand: Hand;
   devCards: DevCardInHand[];
   knightsPlayed: number;
+  /** the player's team; null unless the game is in team mode */
+  team: Team | null;
 }
 
 export interface SetupState {
@@ -74,6 +80,10 @@ export interface GameState {
   mode: GameMode;
   /** points needed to win: fixed by the mode, or chosen (5-15) in a custom game */
   vpToWin: number;
+  /** team mode (fixed 2v2, points are summed per team); off by default */
+  teamMode: boolean;
+  /** points a team needs: twice `vpToWin` in team mode, null otherwise */
+  teamTarget: number | null;
   /** the timed mode's limits; null while the game is untimed (the default) */
   timer: TimerConfig | null;
   /** server time (ms) the game was created; null when untimed. Only ever set from the `now` the caller passes in. */

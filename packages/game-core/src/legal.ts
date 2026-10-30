@@ -2,7 +2,7 @@ import type { Action } from './actions';
 import { applyAction } from './reducer';
 import {
   legalBankTrades, legalCityVertices, legalDevPlays, legalRoadEdges, legalRobberTiles, legalRoleActions, legalSettlementVertices,
-  legalStealVictims, validate,
+  legalStealVictims, legalTeamGiftTargets, validate,
 } from './validate';
 import type { GameState, Phase, Resource } from './types';
 
@@ -31,6 +31,8 @@ export interface LegalMoves {
   devPlays: Action[];
   roleActions: Action[];
   acceptableOffers: number[];
+  /** team mode: teammates this player may send cards to now (any time, even off their turn); empty otherwise */
+  teamGiftTargets: string[];
   /** how many cards this player still has to discard (0 when none) */
   mustDiscard: number;
 }
@@ -67,6 +69,7 @@ export function legalMovesFor(s: GameState, pid: string): LegalMoves {
     devPlays: legalDevPlays(s, pid),
     roleActions: legalRoleActions(s, pid),
     acceptableOffers: s.offers.filter((o) => validate(s, pid, { type: 'acceptTrade', offerId: o.id }) === null).map((o) => o.id),
+    teamGiftTargets: legalTeamGiftTargets(s, pid),
     mustDiscard: s.phase === 'discard' ? (s.pendingDiscards[pid] ?? 0) : 0,
   };
 }

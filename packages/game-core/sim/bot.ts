@@ -1,6 +1,6 @@
 import {
   RESOURCES, canAfford, costFor, legalBankTrades, legalCityVertices, legalDevPlays, legalRoadEdges, legalRobberTiles, legalRoleActions,
-  legalSettlementVertices, legalStealVictims, validate,
+  legalSettlementVertices, legalStealVictims, legalTeamGiftTargets, validate,
   type Action, type GameState, type Hand, type Rng,
 } from '../src';
 
@@ -79,6 +79,16 @@ export function moves(s: GameState, rng: Rng, actionsThisTurn: number): Move[] {
         }
       }
       break;
+    }
+  }
+  // team mode: any teammate may send cards at any time, on turn or not (the rng is touched only in team mode, so other games replay as before)
+  if (s.teamMode) {
+    for (const q of s.players) {
+      const to = legalTeamGiftTargets(s, q.id);
+      if (!to.length) continue;
+      const have = RESOURCES.filter((r) => q.hand[r] > 0);
+      const r = pick(have, rng);
+      add({ type: 'teamGift', to: pick(to, rng), cards: { [r]: 1 + Math.floor(rng() * q.hand[r]) } }, 0.4, q.id);
     }
   }
   return out;

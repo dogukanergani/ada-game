@@ -1,7 +1,7 @@
 import { LARGEST_ARMY_MIN, LONGEST_ROAD_MIN } from './constants';
 import { topologyOf } from './maps/topology';
 import type { Ctx } from './state';
-import type { GameState } from './types';
+import type { GameState, Team } from './types';
 
 type RoadBoard = Pick<GameState, 'map' | 'roads' | 'buildings'>;
 
@@ -101,10 +101,24 @@ export function updateLargestArmy(ctx: Ctx) {
   }
 }
 
-/** Only the player whose turn it is can win, counting their hidden cards. */
+/** A team's points: the sum of its members' points, hidden victory point cards included. */
+export function teamPoints(s: Pick<GameState, 'players' | 'buildings' | 'longestRoad' | 'largestArmy'>, team: Team): number {
+  return s.players.reduce((n, p) => (p.team === team ? n + totalPoints(s, p.id) : n), 0);
+}
+
+/**
+ * Only the player whose turn it is can win, counting their hidden cards. In team mode the check is the same but for the
+ * team of the player whose turn it is: their team's summed points against the team target; both members win.
+ */
 export function checkWin(ctx: Ctx) {
   const { s } = ctx;
   if (s.phase === 'finished' || s.phase === 'setup') return;
+  if (s.teamMode) {
+    const team = s.players.find((p) => p.id === s.current)!.team!;
+    const pts = teamPoints(s, team);
+    if (pts >= s.teamTarget!) finishGame(ctx, s.players.filter((p) => p.team === team).map((p) => p.id), pts, 'target');
+    return;
+  }
   const pts = totalPoints(s, s.current);
   if (pts >= s.vpToWin) finishGame(ctx, [s.current], pts, 'target');
 }

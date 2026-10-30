@@ -5,7 +5,7 @@ import { produce, tilesHit } from './production';
 import { roleOf } from './roles/registry';
 import { checkWin, updateLargestArmy, updateLongestRoad } from './scoring';
 import {
-  emptyHand, getPlayer, grantFromBank, handCount, payToBank, sanitizeHand, topoOf, transfer, type Ctx,
+  emptyHand, getPlayer, grantFromBank, handCount, payToBank, sameTeam, sanitizeHand, topoOf, transfer, type Ctx,
 } from './state';
 import { bankRatioFor } from './trade';
 import { costFor, devCardCostFor, discardLimitFor, roadSpotOk, validate } from './validate';
@@ -60,6 +60,8 @@ function dispatch(ctx: Ctx, pid: string, a: Action) {
       return acceptTrade(ctx, pid, a.offerId);
     case 'cancelTrade':
       return cancelTrade(ctx, a.offerId);
+    case 'teamGift':
+      return teamGift(ctx, pid, a.to, sanitizeHand(a.cards)!);
     case 'buyDevCard':
       return buyDevCard(ctx, pid);
     case 'playKnight':
@@ -199,7 +201,7 @@ function moveRobber(ctx: Ctx, pid: string, tile: number) {
   const victims = new Set<string>();
   for (const v of topoOf(s).tiles[tile].corners) {
     const b = s.buildings[v];
-    if (b && b.owner !== pid && handCount(getPlayer(s, b.owner).hand) > 0) victims.add(b.owner);
+    if (b && b.owner !== pid && !sameTeam(s, pid, b.owner) && handCount(getPlayer(s, b.owner).hand) > 0) victims.add(b.owner);
   }
   if (victims.size > 1) {
     s.phase = 'steal';
@@ -242,6 +244,12 @@ function offerTrade(ctx: Ctx, pid: string, give: Hand, want: Hand) {
   const offer = { id: s.nextOfferId++, from: pid, give, want };
   s.offers = [offer];
   ctx.events.push({ type: 'tradeOffered', offer });
+}
+
+/** Cards move between two teammates and nowhere else: the bank, the open offer and the role hooks are not touched. */
+function teamGift(ctx: Ctx, pid: string, to: string, cards: Hand) {
+  transfer(ctx.s, pid, to, cards);
+  ctx.events.push({ type: 'teamGifted', from: pid, to, cards });
 }
 
 function acceptTrade(ctx: Ctx, pid: string, offerId: number) {
