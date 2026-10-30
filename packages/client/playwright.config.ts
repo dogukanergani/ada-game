@@ -7,6 +7,7 @@ const OFFERS = 4303;
 const OFFERS_RES = 4304;
 const TIMED = 4305;
 const FEATURES = 4306;
+const TEAM = 4307;
 
 /**
  * End-to-end tests run against the real thing: a server process that also
@@ -30,10 +31,11 @@ export default defineConfig({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'play', testIgnore: /build.spec|flight.spec|gift.spec|rules-forced\.spec|timer(-shots)?\.spec|finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
+    { name: 'play', testIgnore: /build.spec|flight.spec|gift.spec|rules-forced\.spec|timer(-shots)?\.spec|finish\.spec|demolish\.spec|offer-visibility\.spec|hintline\.spec|edge-pick\.spec|seats\.spec|seats-full\.spec|team\.spec/, use: { baseURL: `http://localhost:${PLAY}` } },
     { name: 'features', testMatch: /build.spec|flight.spec|gift.spec/, use: { baseURL: `http://localhost:${FEATURES}` } },
     { name: 'timed', testMatch: /timer(-shots)?\.spec/, use: { baseURL: `http://localhost:${TIMED}` } },
     { name: 'finish', testMatch: /finish\.spec/, use: { baseURL: `http://localhost:${FINISH}` } },
+    { name: 'team', testMatch: /team\.spec/, use: { baseURL: `http://localhost:${TEAM}` } },
     { name: 'demolish', testMatch: /demolish\.spec/, use: { baseURL: `http://localhost:${DEMOLISH}` } },
     { name: 'offers', testMatch: /offer-visibility\.spec|hintline\.spec|seats\.spec/, use: { baseURL: `http://localhost:${OFFERS}` } },
     { name: 'offers-res', testMatch: /offer-visibility\.spec|edge-pick\.spec|seats-full\.spec|rules-forced\.spec/, use: { baseURL: `http://localhost:${OFFERS_RES}` } },
@@ -94,6 +96,14 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
       env: { PORT: String(FEATURES), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261026', SERVER_SECRET: 'e2e-secret' },
+    },
+    {
+      command: 'npm run start -w @ada/server',
+      cwd: '../..',
+      url: `http://localhost:${TEAM}/`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { PORT: String(TEAM), NODE_ENV: 'test', ADA_TEST_CREATE_LIMIT: '1000', ADA_TEST_SEED: '20261027', ADA_TEST_VP: '3', SERVER_SECRET: 'e2e-secret' },
     },
   ],
 });
