@@ -1,41 +1,32 @@
-# Fly.io app config for Ada. Not deployed automatically by this repo; the
-# human owner runs `fly launch` / `fly deploy`. See docs/DEPLOY.md.
+# fly.toml app configuration file generated for ada-game on 2026-10-26T00:40:04+03:00
 #
-# app: a placeholder, Fly assigns the real one (or the owner renames it) on
-# `fly launch`.
-app = "ada-game"
-primary_region = "fra" # Frankfurt: closest Fly.io region to Istanbul, see docs/DEPLOY.md
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-# No [build] section: Fly auto-detects the Dockerfile at the repo root.
+app = 'ada-game'
+primary_region = 'fra'
 
+[build]
 [env]
-  # PORT must match internal_port below; the server reads it from the
-  # environment (packages/server/src/config.ts), default 3001 if unset.
-  PORT = "3001"
-  # Comma-separated list of allowed browser origins, e.g. the app's own
-  # https://ada-game.fly.dev and any custom domain. Never "*" in production.
-  # Placeholder: the owner sets the real value before the first deploy.
-  CORS_ORIGINS = "https://ada-game.fly.dev"
+  CORS_ORIGINS = 'https://ada-game.fly.dev'
+  PORT = '3001'
 
 [http_service]
   internal_port = 3001
   force_https = true
-  # Rooms live in memory only (see docs/GDD.md, "Platform ve teknik yön"):
-  # stopping the one machine between requests would drop every active game.
-  # Keep exactly one machine running, always on.
-  auto_stop_machines = false
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
   [[http_service.checks]]
-    grace_period = "10s"
-    interval = "15s"
-    method = "GET"
-    path = "/healthz"
-    protocol = "http"
-    timeout = "5s"
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/healthz'
+    protocol = 'http'
 
 [[vm]]
-  cpu_kind = "shared"
+  cpu_kind = 'shared'
   cpus = 1
   memory_mb = 512
