@@ -2257,3 +2257,176 @@ legend {
 :root[data-motion='off'] .toggle-knob {
   transition: none;
 }
+
+/* ---------- the team mode (2v2) ---------- */
+:root {
+  --team-a: #5aa9ff;
+  --team-b: #d4e157;
+}
+.team-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--sea);
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--sea);
+  vertical-align: middle;
+}
+.team-badge[data-team='A'] {
+  background: var(--team-a);
+}
+.team-badge[data-team='B'] {
+  background: var(--team-b);
+}
+.team-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.team-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  min-width: 0;
+  border-radius: var(--radius);
+  border: 2px solid var(--line);
+  background: var(--sea);
+}
+.team-col[data-team='A'] {
+  border-color: var(--team-a);
+}
+.team-col[data-team='B'] {
+  border-color: var(--team-b);
+}
+.team-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+.team-members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+}
+.team-members li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.team-members li[data-empty='true'] {
+  color: var(--muted);
+  font-style: italic;
+}
+.team-col .btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.team-col .btn[aria-disabled='true'] {
+  opacity: 0.55;
+}
+
+.game-top > .team-bar {
+  flex: 1 0 100%;
+  order: 8;
+}
+.team-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 12px 4px;
+  font-size: 14px;
+}
+.team-side {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-areas: 'badge who points' 'meter meter meter';
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 3px;
+  min-width: 0;
+}
+.team-side .team-badge {
+  grid-area: badge;
+}
+.team-who {
+  grid-area: who;
+  color: var(--muted);
+}
+.team-points {
+  grid-area: points;
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.team-meter {
+  grid-area: meter;
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.team-meter > span {
+  display: block;
+  height: 100%;
+}
+.team-side[data-team='A'] .team-meter > span {
+  background: var(--team-a);
+}
+.team-side[data-team='B'] .team-meter > span {
+  background: var(--team-b);
+}
+.team-goal {
+  color: var(--muted);
+  white-space: nowrap;
+}
+@media (max-width: 380px) {
+  .team-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .team-goal {
+    grid-column: 1 / -1;
+  }
+}
+
+/* a seat of the team mode: the frame is in the team's colour, the teammate's seat is also marked with a second outline */
+.pseat[data-team='A'] .pseat-btn {
+  border-color: var(--team-a);
+}
+.pseat[data-team='B'] .pseat-btn {
+  border-color: var(--team-b);
+}
+.pseat[data-team][data-turn='true'] .pseat-btn {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.pseat[data-mate='true'] .pseat-btn {
+  outline: 2px dashed var(--text);
+  outline-offset: 2px;
+}
+.gift-to {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.team-scores li[data-winner='true'] {
+  font-weight: 700;
+}

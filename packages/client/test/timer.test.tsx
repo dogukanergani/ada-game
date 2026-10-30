@@ -161,12 +161,13 @@ describe('the lobby: custom target and timer', () => {
     targetScore: 10,
     timer: null,
     timerChoices: choices,
+    teamMode: false,
     phase: 'lobby',
     minPlayers: 2,
     maxPlayers: 5,
     players: [
-      { id: 'a', name: 'Ada', role: null, connected: true, host: true },
-      { id: 'b', name: 'Bora', role: null, connected: true, host: false },
+      { id: 'a', name: 'Ada', role: null, connected: true, host: true, team: null },
+      { id: 'b', name: 'Bora', role: null, connected: true, host: false, team: null },
     ],
     ...over,
   });

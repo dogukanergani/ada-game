@@ -5,7 +5,7 @@ import { useT } from '../i18n/context';
 import { DeckInfoButton } from './DeckInfo';
 import { reasonText, shortReason } from './reasons';
 
-export type SheetName = 'build' | 'trade' | 'cards' | 'costs' | 'log';
+export type SheetName = 'build' | 'trade' | 'cards' | 'costs' | 'log' | 'gift';
 
 interface Props {
   controls: GameControls;
@@ -28,6 +28,8 @@ interface Props {
   moment?: string;
   /** cards left in the development deck (public), for the deck info beside the buy button */
   deckCount?: number;
+  /** the team mode's "send to team" button: absent outside the team mode, off when the server lists nobody to send to */
+  gift?: { enabled: boolean; reason: string } | null;
 }
 
 /** One action: enabled only when the server says it is legal; a disabled one stays tappable and explains itself. */
@@ -62,7 +64,7 @@ function ActionButton({
   );
 }
 
-export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onBuyCard, onMode, onSheet, onConfirm, onCancel, extra, onScores, moment = '', deckCount = 0 }: Props) {
+export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onBuyCard, onMode, onSheet, onConfirm, onCancel, extra, onScores, moment = '', deckCount = 0, gift = null }: Props) {
   const t = useT();
   const [note, setNote] = useState<BlockedNote | null>(null);
   const here = blockMoment(moment, mode);
@@ -155,6 +157,25 @@ export function ActionDock({ controls, mode, selection, busy, onRoll, onEnd, onB
 
       <div className="actions-grid small">
         <ActionButton id="trade" label={controls.openOffers > 0 ? t('game.action.tradeOpen', { n: controls.openOffers }) : t('game.action.trade')} control={controls.trade} onBlocked={block} onClick={() => onSheet('trade')} />
+        {gift && !placing && (
+          <button
+            type="button"
+            className="btn action"
+            data-action="gift"
+            aria-disabled={!gift.enabled}
+            onClick={() => {
+              if (gift.enabled) {
+                setBlocked(null);
+                onSheet('gift');
+              } else {
+                audio.play('error');
+                setBlocked(gift.reason);
+              }
+            }}
+          >
+            {t('gift.button')}
+          </button>
+        )}
         <button type="button" className="btn action" data-action="costs" onClick={() => onSheet('costs')}>
           {t('game.action.costs')}
         </button>

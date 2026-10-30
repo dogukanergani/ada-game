@@ -83,6 +83,8 @@ export function formatEvent(e: GameEvent, { t, name, me }: FormatContext): strin
     }
     case 'tradeCancelled':
       return t('event.tradeCancelled');
+    case 'teamGifted':
+      return t('event.teamGifted', { from: name(e.from), to: name(e.to), cards: handText(t, e.cards) });
     case 'devCardBought':
       return e.kind
         ? t('event.devCardBought.own', { player: name(e.player), kind: t(key(`devCard.${e.kind}`)) })
@@ -106,6 +108,7 @@ export function formatEvent(e: GameEvent, { t, name, me }: FormatContext): strin
     case 'turnStarted':
       return t('event.turnStarted', { player: name(e.player), turn: e.turn });
     case 'gameWon':
+      if (e.team) return t('event.gameWon.team', { team: t(key(`team.name.${e.team}`)), players: nameList(t, e.players.map(name)), points: e.points });
       return e.players.length === 1
         ? t('event.gameWon', { player: name(e.players[0]), points: e.points })
         : t('event.gameWon.tie', { players: nameList(t, e.players.map(name)), points: e.points });
@@ -135,6 +138,9 @@ export function describeError(t: Translate, error: ServerError | undefined, name
   if (error.key === 'game' && error.error) return describeGameError(t, error.error, name);
   const params: Params = {};
   if (typeof error.code === 'string') params.code = error.code;
+  for (const d of ['need', 'have', 'A', 'B'] as const) if (typeof error[d] === 'number') params[d] = error[d] as number;
+  const reasoned = typeof error.reason === 'string' ? `server.${error.key}.${error.reason}` : '';
+  if (reasoned && hasKey(reasoned)) return t(reasoned, params);
   const k = `server.${error.key}`;
   return hasKey(k) ? t(k, params) : t('server.internal');
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { GameView } from '@ada/game-core';
-import { AMBER, INK, PANEL, PIECE_OUTLINE, contrast, playerColor } from '../board/colors';
+import type { GameView, Team } from '@ada/game-core';
+import { AMBER, INK, PANEL, PIECE_OUTLINE, TEAM_COLORS, contrast, playerColor } from '../board/colors';
 import { emblemFor } from '../board/emblems';
 import { useT } from '../i18n/context';
 import { hasKey, type MessageKey } from '../i18n';
@@ -77,11 +77,15 @@ export function PlayerSeat({ view, player: p, online, held, open, onToggle }: Se
   const roleName = hasKey(`role.${p.role}.name`) ? t(`role.${p.role}.name` as MessageKey) : t('role.unknown.name');
   const points = p.points + (p.hiddenPoints ?? 0);
   const cards = Math.max(0, p.handCount - held);
+  const myTeam = view.players.find((q) => q.id === view.me)?.team ?? null;
+  const mate = view.teamMode && !isMe && p.team !== null && p.team === myTeam;
   const longest = view.longestRoad.holder === p.id;
   const army = view.largestArmy.holder === p.id;
   const aria = [
     p.name,
     roleName,
+    p.team ? t('seat.team', { team: t(`team.short.${p.team}` as MessageKey) }) : null,
+    mate ? t('seat.teammate') : null,
     t('seat.points', { n: points }),
     t('seat.cards', { n: cards }),
     p.devCardCount > 0 ? t('seat.dev', { n: p.devCardCount }) : null,
@@ -93,9 +97,9 @@ export function PlayerSeat({ view, player: p, online, held, open, onToggle }: Se
     .filter(Boolean)
     .join(', ');
   return (
-    <li className="pseat" data-player={p.id} data-me={isMe} data-turn={turn} data-online={online} data-seat={p.seat + 1} aria-current={turn ? 'true' : undefined}>
+    <li className="pseat" data-player={p.id} data-me={isMe} data-turn={turn} data-online={online} data-seat={p.seat + 1} data-team={p.team ?? undefined} data-mate={mate || undefined} aria-current={turn ? 'true' : undefined}>
       <button type="button" className="pseat-btn" aria-label={aria} aria-expanded={open} onClick={onToggle}>
-        <Avatar seat={p.seat} role={p.role} turn={turn} online={online} />
+        <Avatar seat={p.seat} role={p.role} turn={turn} online={online} team={p.team} />
         <span className="pseat-body">
           <span className="pseat-id">
             <span className="pseat-name">{p.name}</span>
@@ -157,7 +161,7 @@ export function PlayerSeat({ view, player: p, online, held, open, onToggle }: Se
 }
 
 /** The ring in the player's colour, the role's emblem inside, the seat number attached to the ring. Amber outside when it is their move; a dashed ring when offline. */
-function Avatar({ seat, role, turn, online }: { seat: number; role: string; turn: boolean; online: boolean }) {
+function Avatar({ seat, role, turn, online, team }: { seat: number; role: string; turn: boolean; online: boolean; team: Team | null }) {
   const fill = playerColor(seat);
   const ink = contrast(fill, PIECE_OUTLINE) > contrast(fill, '#ffffff') ? PIECE_OUTLINE : '#ffffff';
   const emblem = emblemFor(role);
@@ -170,6 +174,14 @@ function Avatar({ seat, role, turn, online }: { seat: number; role: string; turn
           <path key={i} d={d} />
         ))}
       </g>
+      {team && (
+        <g data-team-mark={team}>
+          <rect x="0.8" y="0.8" width="15" height="15" rx="4" fill={TEAM_COLORS[team]} stroke={PIECE_OUTLINE} strokeWidth="1.4" />
+          <text x="8.3" y="12.2" textAnchor="middle" fontSize="11" fontWeight="800" fill={PIECE_OUTLINE} className="svg-num">
+            {team}
+          </text>
+        </g>
+      )}
       <circle cx="36" cy="36" r="7.6" fill={fill} stroke={PIECE_OUTLINE} strokeWidth="1.6" />
       <text x="36" y="39.6" textAnchor="middle" fontSize="10.5" fontWeight="800" fill={ink} className="svg-num">
         {seat + 1}

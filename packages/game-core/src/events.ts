@@ -1,4 +1,4 @@
-import type { DevCardKind, GameMode, Hand, PieceKind, Resource, RoleId, TradeOffer } from './types';
+import type { DevCardKind, GameMode, Hand, PieceKind, Resource, RoleId, Team, TradeOffer } from './types';
 
 /**
  * The core never produces text. It returns events (what happened) and errors
@@ -42,8 +42,8 @@ export type GameEvent =
   | { type: 'turnStarted'; player: string; turn: number }
   /** a player's turn ran out and was ended for them */
   | { type: 'turnTimedOut'; player: string }
-  /** `players` has one id for a win by points, several when the time limit ended the game level; `points` is the winners' score */
-  | { type: 'gameWon'; players: string[]; points: number; reason: 'target' | 'time' };
+  /** `players` has one id for a win by points, several when the time limit ended the game level; `points` is the winners' score (a team's total in team mode, where `team` names the winning team, or is null when the game ended level between the teams; absent otherwise) */
+  | { type: 'gameWon'; players: string[]; points: number; reason: 'target' | 'time'; team?: Team | null };
 
 /** Every error type the core can return, as data: clients check their translations against this list. */
 /** Every event type the core can emit, as data. The type check below fails to compile if this list and the `GameEvent` union drift apart. */

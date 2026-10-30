@@ -27,10 +27,11 @@ const view = (over: Partial<LobbyView> = {}, players: Partial<LobbyView['players
   targetScore: 10,
   timer: null,
   timerChoices: { turnSeconds: [60, 90, 120, 150, 180], gameSeconds: [1800, 3600, 5400] },
+  teamMode: false,
   phase: 'lobby',
   minPlayers: 2,
   maxPlayers: 5,
-  players: players.map((p, i) => ({ id: ['a', 'b', 'c'][i], name: ['Ada', 'Bora', 'Cem'][i], role: null, connected: true, host: i === 0, ...p })),
+  players: players.map((p, i) => ({ id: ['a', 'b', 'c'][i], name: ['Ada', 'Bora', 'Cem'][i], role: null, connected: true, host: i === 0, team: null, ...p })),
   ...over,
 });
 

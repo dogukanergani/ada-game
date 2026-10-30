@@ -133,6 +133,7 @@ export function finishGame(ctx: Ctx, winners: string[], points: number, reason: 
   s.roadBuildingLeft = 0;
   s.pendingDiscards = {};
   s.offers = [];
-  ctx.events.push({ type: 'gameWon', players: winners, points, reason });
+  const teams = [...new Set(s.players.filter((p) => winners.includes(p.id)).map((p) => p.team))];
+  ctx.events.push({ type: 'gameWon', players: winners, points, reason, ...(s.teamMode ? { team: teams.length === 1 ? teams[0] : null } : {}) });
 }
 

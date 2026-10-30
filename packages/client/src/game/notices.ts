@@ -27,7 +27,7 @@ export interface Notice {
 
 /** where the player is looking: no sheet, or a sheet (and for the trade sheet, its tab) */
 export interface Surface {
-  sheet: 'build' | 'trade' | 'cards' | 'costs' | 'log' | null;
+  sheet: 'build' | 'trade' | 'cards' | 'costs' | 'log' | 'gift' | null;
   tradeTab: 'bank' | 'players';
 }
 

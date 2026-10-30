@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CUSTOM_TARGET_MAX, CUSTOM_TARGET_MIN, ROLE_LIST, MODES, type GameMode } from '@ada/game-core';
+import { CUSTOM_TARGET_MAX, CUSTOM_TARGET_MIN, ROLE_LIST, MODES, TEAMS, TEAM_MODE_PLAYERS, TEAM_SIZE, type GameMode } from '@ada/game-core';
 import { NAME_MAX_LENGTH, type LobbyView } from '@ada/protocol';
 import { useT } from '../i18n/context';
 import { hasKey, type MessageKey } from '../i18n';
@@ -71,6 +71,13 @@ const pickDefault = (choices: number[], preferred: number): number => (choices.i
 
 const MODE_ORDER: GameMode[] = ['standard', 'short', 'custom'];
 
+/** The team mode can start when exactly 4 players are here and two of them sit on each team. */
+export function teamsReady(lobby: Pick<LobbyView, 'teamMode' | 'players'>): boolean {
+  if (!lobby.teamMode) return true;
+  const here = lobby.players.filter((p) => p.connected);
+  return here.length === TEAM_MODE_PLAYERS && TEAMS.every((team) => here.filter((p) => p.team === team).length === TEAM_SIZE);
+}
+
 /** Room lobby: who is here, pick a role, the host picks the mode (and the timer) and starts. */
 export function Lobby({ lobby }: { lobby: LobbyView }) {
   const t = useT();
@@ -78,7 +85,9 @@ export function Lobby({ lobby }: { lobby: LobbyView }) {
   const me = lobby.players.find((p) => p.id === lobby.me);
   const isHost = lobby.hostId === lobby.me;
   const connected = lobby.players.filter((p) => p.connected).length;
-  const canStart = isHost && connected >= lobby.minPlayers;
+  const teamOk = teamsReady(lobby);
+  const canStart = isHost && connected >= lobby.minPlayers && teamOk;
+  const noTeam = lobby.players.filter((p) => p.connected && p.team === null);
   const [name, setName] = useState(me?.name ?? '');
   const ownerOf = (role: string) => lobby.players.find((p) => p.role === role);
 
@@ -284,6 +293,82 @@ export function Lobby({ lobby }: { lobby: LobbyView }) {
         {!isHost && <p className="field-hint">{t('lobby.timer.hostOnly')}</p>}
       </section>
 
+      <section className="card" aria-labelledby="team-title" data-team-mode={lobby.teamMode ? 'on' : 'off'}>
+        <div className="timer-head">
+          <h2 id="team-title">{t('lobby.team.title')}</h2>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={lobby.teamMode}
+            aria-labelledby="team-title"
+            className="switch"
+            data-action="team-toggle"
+            disabled={!isHost}
+            onClick={() => void api.request('lobby:setTeamMode', { on: !lobby.teamMode })}
+          >
+            <span className="switch-knob" aria-hidden="true" />
+            <span className="switch-text">{lobby.teamMode ? t('lobby.team.on') : t('lobby.team.off')}</span>
+          </button>
+        </div>
+        {lobby.teamMode && (
+          <>
+            <p className="field-hint">{t('lobby.team.pick')}</p>
+            <div className="team-cols">
+              {TEAMS.map((team) => {
+                const members = lobby.players.filter((p) => p.team === team);
+                const mineHere = me?.team === team;
+                const full = members.length >= TEAM_SIZE;
+                return (
+                  <div key={team} className="team-col" data-team={team} data-full={full}>
+                    <h3 className="team-head">
+                      <span className="team-badge" data-team={team} aria-hidden="true">
+                        {t(`team.short.${team}`)}
+                      </span>
+                      {t(`team.name.${team}`)}
+                    </h3>
+                    <ul className="team-members">
+                      {Array.from({ length: TEAM_SIZE }, (_, i) => (
+                        <li key={i} data-empty={!members[i]}>
+                          {members[i] ? (
+                            <>
+                              {members[i].name}
+                              {members[i].id === lobby.me && <span className="tag">{t('lobby.player.you')}</span>}
+                            </>
+                          ) : (
+                            t('lobby.team.empty')
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      className="btn"
+                      data-action={`team-join-${team}`}
+                      aria-pressed={mineHere}
+                      aria-disabled={full && !mineHere}
+                      onClick={() => {
+                        if (mineHere) void api.request('lobby:setTeam', { team: null });
+                        else if (!full) void api.request('lobby:setTeam', { team });
+                      }}
+                    >
+                      {mineHere ? t('lobby.team.leave') : full ? t('lobby.team.full') : t('lobby.team.join')}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {noTeam.length > 0 && <p className="field-hint">{t('lobby.team.noTeam', { names: noTeam.map((p) => p.name).join(', ') })}</p>}
+            {lobby.players.filter((p) => p.connected).length !== TEAM_MODE_PLAYERS && (
+              <p className="field-hint" data-team="need4">
+                {t('lobby.team.need4', { n: lobby.players.filter((p) => p.connected).length })}
+              </p>
+            )}
+          </>
+        )}
+        <p className="field-hint">{t('lobby.team.hint')}</p>
+        {!isHost && <p className="field-hint">{t('lobby.team.hostOnly')}</p>}
+      </section>
+
       <footer className="lobby-actions">
         {isHost ? (
           <>
@@ -292,7 +377,7 @@ export function Lobby({ lobby }: { lobby: LobbyView }) {
             </button>
             {!canStart && (
               <p id="start-reason" className="field-hint">
-                {t('lobby.start.needPlayers')}
+                {connected >= lobby.minPlayers ? t('lobby.start.needTeams') : t('lobby.start.needPlayers')}
               </p>
             )}
           </>

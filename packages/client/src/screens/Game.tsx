@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PieceKind } from '@ada/game-core';
 import { Board, type Pick } from '../board/Board';
-import { NO_MODE, demolishPieces, controlsFor, type Mode } from '../game/controls';
+import { NO_MODE, countHand, demolishPieces, controlsFor, type Mode } from '../game/controls';
 import { defaultTab } from '../game/tradeView';
 import { titleFor, type Surface } from '../game/notices';
 import { heldBack, heldTotal, useRollPresentation, visibleLog } from '../game/roll';
@@ -14,6 +14,7 @@ import { DiceTray } from '../ui/DiceTray';
 import { DemolishPanel, type PreviewState } from '../ui/DemolishPanel';
 import { GameClock } from '../ui/GameClock';
 import { TimerBar } from '../ui/TimerBar';
+import { TeamBar } from '../ui/TeamBar';
 import { HeaderButtons } from '../ui/HeaderButtons';
 import { HandBar } from '../ui/HandBar';
 import { NoticeBar, NoticeSlotProvider } from '../ui/NoticeBar';
@@ -25,6 +26,7 @@ import { CostsSheet, DiscardSheet, LogSheet, StealSheet } from './sheets/InfoShe
 import { DevCardsSheet } from './sheets/DevCardsSheet';
 import { GameOverSheet, endedByTime } from './sheets/GameOverSheet';
 import { TradeSheet } from './sheets/TradeSheet';
+import { GiftSheet } from './sheets/GiftSheet';
 import { BuildSheet } from './sheets/BuildSheet';
 
 /** px at the top of the board that stay free for the dice resting in the corner */
@@ -126,6 +128,10 @@ export function GameScreen() {
 
   const closeSheet = () => setSheet(null);
 
+  /* the team mode's gift button: on whenever the server lists a teammate to send to (any turn, any phase); otherwise it says why not */
+  const myHand = view.players.find((p) => p.id === view.me)?.hand;
+  const giftState = { enabled: legal.teamGiftTargets.length > 0, reason: t(myHand && countHand(myHand) === 0 ? 'gift.noCards' : 'gift.discardFirst') };
+
   /* notices (an open offer): shown on every surface that can cover the game, see game/notices.ts */
   const surface: Surface = { sheet, tradeTab };
   const openNotice = () => {
@@ -148,6 +154,7 @@ export function GameScreen() {
         <LastEvent view={view} log={shownLog} connected={connected} rolling={roll.rolling} />
         <GameClock clock={state.clock} />
         <HeaderButtons locked={controls.forced !== null} vpToWin={view.vpToWin} />
+        <TeamBar view={view} />
         <TimerBar view={view} clock={state.timerClock} />
       </header>
 
@@ -179,6 +186,7 @@ export function GameScreen() {
           busy={busy}
           moment={moment}
           deckCount={view.devDeckCount}
+          gift={view.teamMode && view.phase !== 'finished' ? giftState : null}
           onRoll={() => void send({ type: 'roll' })}
           onEnd={() => void send({ type: 'endTurn' })}
           onBuyCard={() => void send({ type: 'buyDevCard' })}
@@ -226,6 +234,7 @@ export function GameScreen() {
         />
       )}
       {!controls.forced && sheet === 'trade' && <TradeSheet view={view} legal={legal} onClose={closeSheet} send={send} tab={tradeTab} onTab={setTradeTab} />}
+      {!controls.forced && sheet === 'gift' && view.teamMode && <GiftSheet view={view} legal={legal} onClose={closeSheet} send={send} />}
       {!controls.forced && sheet === 'cards' && <DevCardsSheet view={view} legal={legal} onClose={closeSheet} onBuy={() => void send({ type: 'buyDevCard' })} send={send} />}
       {!controls.forced && sheet === 'costs' && <CostsSheet view={view} onClose={closeSheet} />}
       {!controls.forced && sheet === 'log' && <LogSheet view={view} log={shownLog} onClose={closeSheet} />}

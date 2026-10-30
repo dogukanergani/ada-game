@@ -27,6 +27,8 @@ export function reactionFor(e: GameEvent, me: string): Reaction | null {
       return e.player === me ? { sound: 'build', tap: true } : null;
     case 'tradeAccepted':
       return e.from === me || e.to === me ? { sound: 'trade' } : null;
+    case 'teamGifted':
+      return e.from === me || e.to === me ? { sound: 'trade' } : null;
     case 'bankTraded':
       return e.player === me ? { sound: 'trade' } : null;
     case 'turnStarted':

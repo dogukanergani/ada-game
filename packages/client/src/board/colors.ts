@@ -33,6 +33,8 @@ export const TERRAIN_DARK: Record<TileKind, string> = {
  * also carry the seat number, so colour is never the only cue.
  */
 export const PLAYER_COLORS = ['#ff8a3d', '#a66bff', '#f6f6f6', '#ff7ab8', '#2fd4c4'] as const;
+/** Team frames of the team mode: neither is a player colour; the letter A / B always goes with them, so colour is never the only cue. */
+export const TEAM_COLORS = { A: '#5aa9ff', B: '#d4e157' } as const;
 export const PIECE_OUTLINE = '#0b1b22';
 export const playerColor = (seat: number): string => PLAYER_COLORS[seat % PLAYER_COLORS.length];
 

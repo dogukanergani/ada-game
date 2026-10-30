@@ -57,7 +57,7 @@ describe('storage', () => {
 });
 
 const lobby = (over: Partial<LobbyView> = {}): LobbyView => ({
-  code: 'KMTP', me: 'a', hostId: 'a', mode: 'standard', targetScore: 10, timer: null, timerChoices: { turnSeconds: [60, 90, 120, 150, 180], gameSeconds: [1800, 3600, 5400] }, phase: 'lobby', minPlayers: 2, maxPlayers: 5, players: [], ...over,
+  code: 'KMTP', me: 'a', hostId: 'a', mode: 'standard', targetScore: 10, timer: null, timerChoices: { turnSeconds: [60, 90, 120, 150, 180], gameSeconds: [1800, 3600, 5400] }, teamMode: false, phase: 'lobby', minPlayers: 2, maxPlayers: 5, players: [], ...over,
 });
 const payload = (events: GamePayload['events'] = []): GamePayload => ({ view: { me: 'a', phase: 'setup' } as never, legal: { phase: 'setup' } as never, events, clock: { elapsedMs: 0, running: true }, timerClock: null });
 const run = (msgs: Msg[], from: AppState = initialState) => msgs.reduce(reducer, from);
@@ -207,13 +207,13 @@ describe('Connection', () => {
     expect(await until((m) => m.t === 'conn' && m.status === 'online')).toBeTruthy();
   });
 
-  it('the client of before the timed mode (protocol 2) is told the app is out of date by this server (protocol 3), and stays out', async () => {
-    expect(PROTOCOL_VERSION).toBe(3);
-    const { conn, seen, until } = await boot(2);
+  it('the client of before the team mode (protocol 3) is told the app is out of date by this server (protocol 4), and stays out', async () => {
+    expect(PROTOCOL_VERSION).toBe(4);
+    const { conn, seen, until } = await boot(3);
     conn.start();
     expect(await until((m) => m.t === 'conn' && m.status === 'incompatible')).toBeTruthy();
     expect(seen.some((m) => m.t === 'hello' || (m.t === 'conn' && m.status === 'online'))).toBe(false);
-    // the real client of today speaks 2: its own default is the protocol's version
+    // the real client of today speaks 4: its own default is the protocol's version
     const current = await boot();
     current.conn.start();
     expect(await current.until((m) => m.t === 'conn' && m.status === 'online')).toBeTruthy();

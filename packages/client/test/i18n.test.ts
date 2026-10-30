@@ -123,6 +123,7 @@ const samples: Record<GameEvent['type'], GameEvent[]> = {
     { type: 'tradeAccepted', offerId: 1, from: 'a', to: 'b', give: hand(), want: hand({ wool: 1 }) },
   ],
   tradeCancelled: [{ type: 'tradeCancelled', offerId: 1 }],
+  teamGifted: [{ type: 'teamGifted', from: 'a', to: 'b', cards: hand({ ore: 1, wool: 2 }) }],
   devCardBought: [{ type: 'devCardBought', player: 'a', kind: 'knight' }, { type: 'devCardBought', player: 'b', kind: null }],
   devCardPlayed: [{ type: 'devCardPlayed', player: 'a', kind: 'monopoly' }],
   yearOfPlentyTaken: [{ type: 'yearOfPlentyTaken', player: 'a', gains: hand({ ore: 2 }) }],
@@ -141,6 +142,7 @@ const samples: Record<GameEvent['type'], GameEvent[]> = {
     { type: 'gameWon', players: ['a'], points: 10, reason: 'target' },
     { type: 'gameWon', players: ['a', 'b'], points: 6, reason: 'time' },
     { type: 'gameWon', players: ['a', 'b', 'c'], points: 4, reason: 'time' },
+    { type: 'gameWon', players: ['a', 'b'], points: 20, reason: 'target', team: 'A' },
   ],
   turnTimedOut: [{ type: 'turnTimedOut', player: 'a' }],
 };
