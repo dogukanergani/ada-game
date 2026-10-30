@@ -14,7 +14,7 @@ import { clockFor, isActive, timerClockFor, type Room } from './rooms/room';
 import type { RoomStore } from './rooms/store';
 import { RoomService, type Out } from './service';
 import { createStaticHandler } from './static';
-import { parseAction, parseHello, parseJoin, parseMode, parseNameOnly, parseRole, parseTimer, type Parsed } from './validate';
+import { parseAction, parseHello, parseJoin, parseMode, parseNameOnly, parseRole, parseTeam, parseTeamMode, parseTimer, type Parsed } from './validate';
 
 export const ROOM_IDLE_MS = 3 * 60 * 60 * 1000;
 
@@ -209,6 +209,14 @@ export function createAdaServer(opts: AdaServerOptions) {
       case 'lobby:setTimer': {
         const p = parseTimer(payload);
         return isOk(p) ? inRoom(service.setTimer(pid, p.value.timer), pushLobby) : { ack: err('badPayload') };
+      }
+      case 'lobby:setTeamMode': {
+        const p = parseTeamMode(payload);
+        return isOk(p) ? inRoom(service.setTeamMode(pid, p.value.on), pushLobby) : { ack: err('badPayload') };
+      }
+      case 'lobby:setTeam': {
+        const p = parseTeam(payload);
+        return isOk(p) ? inRoom(service.setTeam(pid, p.value.team), pushLobby) : { ack: err('badPayload') };
       }
       case 'lobby:start':
         return inRoom(service.start(pid), (room) => {

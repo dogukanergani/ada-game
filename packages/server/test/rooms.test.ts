@@ -171,8 +171,8 @@ describe('lobby: names and view', () => {
     const v = lobby.lobbyViewFor(r, 'host');
     expect(v).toMatchObject({ code: 'ABCD', me: 'host', hostId: 'host', mode: 'standard', phase: 'lobby', minPlayers: 2, maxPlayers: 5 });
     expect(v.players).toEqual([
-      { id: 'host', name: 'Host', role: null, connected: true, host: true },
-      { id: 'a', name: 'A', role: null, connected: false, host: false },
+      { id: 'host', name: 'Host', role: null, connected: true, host: true, team: null },
+      { id: 'a', name: 'A', role: null, connected: false, host: false, team: null },
     ]);
   });
 });

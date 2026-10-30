@@ -1,4 +1,4 @@
-import { legalMovesFor, type Action, type GameEvent, type GameMode, type LegalMoves, type Rng, type TimerConfig } from '@ada/game-core';
+import { legalMovesFor, type Action, type GameEvent, type GameMode, type LegalMoves, type Rng, type Team, type TimerConfig } from '@ada/game-core';
 import type { PreviewResult } from '@ada/protocol';
 import { playAction, previewAction, startGame, tickGame } from './game/session';
 import { freshCode, parseCode } from './rooms/code';
@@ -131,6 +131,14 @@ export class RoomService {
 
   setTimer(playerId: string, timer: TimerConfig | null) {
     return this.inRoom(playerId, (r) => lobby.setTimer(r, playerId, timer, this.timerChoices));
+  }
+
+  setTeamMode(playerId: string, on: boolean) {
+    return this.inRoom(playerId, (r) => lobby.setTeamMode(r, playerId, on));
+  }
+
+  setTeam(playerId: string, team: Team | null) {
+    return this.inRoom(playerId, (r) => lobby.setTeam(r, playerId, team));
   }
 
   start(playerId: string) {

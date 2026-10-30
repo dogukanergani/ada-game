@@ -22,12 +22,16 @@ export function startGame(room: Room, playerId: string, rng: Rng, now: number, t
       mode: room.mode as GameMode,
       ...(room.mode === 'custom' ? { targetScore: room.targetScore } : {}),
       timer: room.timer,
+      ...(plan.teams ? { teams: plan.teams } : {}),
     },
     rng,
     now,
   );
   if (!created.ok) return fail('game', { error: created.error });
-  if (testVp !== null) created.state.vpToWin = testVp;
+  if (testVp !== null) {
+    created.state.vpToWin = testVp;
+    if (created.state.teamMode) created.state.teamTarget = testVp * 2;
+  }
   if (testResources !== null) dealTestHands(created.state, testResources);
   commitStart(room, plan.players);
   room.game = created.state;
@@ -67,7 +71,7 @@ export function tickGame(room: Room, rng: Rng, now: number): Done {
  * declares itself random, ...) is answered with the verdict and the cost only.
  */
 const FULL_PREVIEW: ReadonlySet<Action['type']> = new Set([
-  'placeSettlement', 'placeRoad', 'upgradeCity', 'bankTrade', 'offerTrade', 'cancelTrade', 'endTurn', 'discard',
+  'placeSettlement', 'placeRoad', 'upgradeCity', 'bankTrade', 'offerTrade', 'teamGift', 'cancelTrade', 'endTurn', 'discard',
   'playKnight', 'playRoadBuilding', 'playYearOfPlenty', 'roleAction',
 ]);
 

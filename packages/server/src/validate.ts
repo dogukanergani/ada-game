@@ -57,6 +57,10 @@ export function parseAction(x: unknown): Parsed<Action> {
       const want = parseHand(x.want);
       return give && want ? good({ type: 'offerTrade', give, want }) : bad;
     }
+    case 'teamGift': {
+      const cards = parseHand(x.cards);
+      return isShortString(x.to, 64) && cards ? good({ type: 'teamGift', to: x.to, cards }) : bad;
+    }
     case 'acceptTrade':
     case 'cancelTrade':
       return isInt(x.offerId, 1_000_000_000) ? good({ type: x.type, offerId: x.offerId }) : bad;
@@ -98,6 +102,10 @@ export const parseMode = (x: unknown): Parsed<{ mode: GameMode; targetScore?: nu
   // the lobby decides whether the number is allowed; here it only has to be a number
   return typeof x.targetScore === 'number' && Number.isFinite(x.targetScore) ? good({ mode: x.mode, targetScore: x.targetScore }) : bad;
 };
+
+export const parseTeamMode = (x: unknown): Parsed<{ on: boolean }> => (isPlain(x) && typeof x.on === 'boolean' ? good({ on: x.on }) : bad);
+export const parseTeam = (x: unknown): Parsed<{ team: 'A' | 'B' | null }> =>
+  isPlain(x) && (x.team === null || x.team === 'A' || x.team === 'B') ? good({ team: x.team as 'A' | 'B' | null }) : bad;
 
 /** `{timer: null}` or `{timer: {turnSeconds, gameSeconds}}` with whole numbers; whether the limits are on offer is the lobby's call. */
 export const parseTimer = (x: unknown): Parsed<{ timer: { turnSeconds: number; gameSeconds: number } | null }> => {

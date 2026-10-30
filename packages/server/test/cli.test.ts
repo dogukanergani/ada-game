@@ -115,6 +115,6 @@ describe('cli: autoplay over real sockets', () => {
     expect(renderMap(v)).toContain('buildings');
     const lobby = (await players[0].until('lobby:update', (l: any) => l.phase === 'finished')) as any;
     expect(renderLobby(lobby)).toContain(lobby.code);
-    expect(renderLegal({ phase: 'main', canRoll: false, canEndTurn: true, canBuyDevCard: false, settlements: [1], cities: [], citySites: [], settlementSites: [1], roads: [2], roadOpenings: { 2: 1 }, robberTiles: [], stealVictims: [], bankTrades: [], devPlays: [], roleActions: [], acceptableOffers: [], mustDiscard: 0 })).toContain('settle: 1');
+    expect(renderLegal({ phase: 'main', canRoll: false, canEndTurn: true, canBuyDevCard: false, settlements: [1], cities: [], citySites: [], settlementSites: [1], roads: [2], roadOpenings: { 2: 1 }, robberTiles: [], stealVictims: [], bankTrades: [], devPlays: [], roleActions: [], acceptableOffers: [], teamGiftTargets: [], mustDiscard: 0 })).toContain('settle: 1');
   }, 120_000);
 });

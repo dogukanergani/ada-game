@@ -1,10 +1,12 @@
-import type { GameMode, GameState, RoleId, TimerConfig } from '@ada/game-core';
+import type { GameMode, GameState, RoleId, Team, TimerConfig } from '@ada/game-core';
 import type { ErrorKey, GameClock, RoomPhase, ServerError, TimerClock } from '@ada/protocol';
 
 export interface Seat {
   playerId: string;
   name: string;
   role: RoleId | null;
+  /** the team picked in a team-mode lobby; null otherwise */
+  team: Team | null;
   connected: boolean;
   /** left a started game on purpose: the seat is kept, but the player is free to join another room */
   away: boolean;
@@ -23,6 +25,8 @@ export interface Room {
   targetScore: number;
   /** the timed mode's limits, chosen in the lobby; null = untimed */
   timer: TimerConfig | null;
+  /** team mode (2v2); the seats' `team` picks only mean something while it is on */
+  teamMode: boolean;
   phase: RoomPhase;
   /** join order */
   seats: Seat[];

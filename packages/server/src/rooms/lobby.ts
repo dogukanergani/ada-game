@@ -1,6 +1,6 @@
 import {
   CUSTOM_TARGET_MAX, CUSTOM_TARGET_MIN, GAME_MINUTES_OPTIONS, MAX_PLAYERS, MIN_PLAYERS, ROLE_LIST, TURN_SECONDS_OPTIONS, isRoleId,
-  type GameMode, type Rng, type RoleId, type TimerConfig,
+  TEAMS, TEAM_MODE_PLAYERS, TEAM_SIZE, type GameMode, type Rng, type RoleId, type Team, type TimerConfig,
 } from '@ada/game-core';
 import { NAME_MAX_LENGTH, type LobbyView } from '@ada/protocol';
 import { fail, isActive, seatOf, type Room } from './room';
@@ -23,8 +23,9 @@ export function newRoom(code: string, hostId: string, name: string): Room {
     mode: 'standard',
     targetScore: 10,
     timer: null,
+    teamMode: false,
     phase: 'lobby',
-    seats: [{ playerId: hostId, name, role: null, connected: true, away: false }],
+    seats: [{ playerId: hostId, name, role: null, team: null, connected: true, away: false }],
     game: null,
     emptySince: null,
     startedAt: null,
@@ -66,7 +67,7 @@ export function addPlayer(room: Room, playerId: string, name: string): Done {
     if (!ghost) return fail('roomFull');
     room.seats = room.seats.filter((s) => s !== ghost);
   }
-  room.seats.push({ playerId, name, role: null, connected: true, away: false });
+  room.seats.push({ playerId, name, role: null, team: null, connected: true, away: false });
   if (!room.hostId) room.hostId = playerId;
   return OK;
 }
@@ -152,7 +153,31 @@ export function setTimer(room: Room, playerId: string, timer: TimerConfig | null
   return OK;
 }
 
-export type StartPlan = { ok: true; players: { id: string; name: string; role: RoleId }[] } | ReturnType<typeof fail>;
+/** The host turns the team mode on or off. Every pick of a team is cleared, so nobody starts on a stale side. */
+export function setTeamMode(room: Room, playerId: string, on: boolean): Done {
+  const h = hostOnly(room, playerId);
+  if (!h.ok) return h;
+  if (room.phase !== 'lobby') return fail('notInLobby');
+  room.teamMode = on;
+  for (const s of room.seats) s.team = null;
+  return OK;
+}
+
+/** A player picks their own team, or null to step out. A team holds at most two. */
+export function setTeam(room: Room, playerId: string, team: Team | null): Done {
+  const seat = seatOf(room, playerId);
+  if (!seat) return fail('notInRoom');
+  if (room.phase !== 'lobby') return fail('notInLobby');
+  if (!room.teamMode) return fail('badTeams', { reason: 'off' });
+  if (team !== null) {
+    if (!(TEAMS as readonly unknown[]).includes(team)) return fail('badTeams', { reason: 'unknownTeam' });
+    if (room.seats.filter((s) => s.team === team && s !== seat).length >= TEAM_SIZE) return fail('teamFull', { team });
+  }
+  seat.team = team;
+  return OK;
+}
+
+export type StartPlan = { ok: true; players: { id: string; name: string; role: RoleId }[]; teams?: Record<string, Team> } | ReturnType<typeof fail>;
 
 /**
  * Checks that the host may start and works out who plays, without changing
@@ -170,7 +195,13 @@ export function planStart(room: Room, playerId: string, rng: Rng): StartPlan {
     rng,
   );
   const players = present.map((s) => ({ id: s.playerId, name: s.name, role: s.role ?? free.pop()! }));
-  return { ok: true, players };
+  if (!room.teamMode) return { ok: true, players };
+  // the team mode is exactly 4 players, two on each team; the core checks again, this gives the lobby a precise reason
+  if (present.length !== TEAM_MODE_PLAYERS) return fail('badTeams', { reason: 'playerCount', need: TEAM_MODE_PLAYERS, have: present.length });
+  const sizes = { A: 0, B: 0 };
+  for (const s of present) if (s.team) sizes[s.team]++;
+  if (sizes.A !== TEAM_SIZE || sizes.B !== TEAM_SIZE) return fail('badTeams', { reason: 'assignment', A: sizes.A, B: sizes.B });
+  return { ok: true, players, teams: Object.fromEntries(present.map((s) => [s.playerId, s.team!])) };
 }
 
 /** Applies a plan once the game exists. */
@@ -204,10 +235,11 @@ export function lobbyViewFor(room: Room, me: string, choices: TimerChoices = def
     targetScore: room.targetScore,
     timer: room.timer,
     timerChoices: { turnSeconds: [...choices.turnSeconds], gameSeconds: [...choices.gameSeconds] },
+    teamMode: room.teamMode,
     phase: room.phase,
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
-    players: room.seats.map((s) => ({ id: s.playerId, name: s.name, role: s.role, connected: s.connected, host: s.playerId === room.hostId })),
+    players: room.seats.map((s) => ({ id: s.playerId, name: s.name, role: s.role, connected: s.connected, host: s.playerId === room.hostId, team: room.teamMode ? s.team : null })),
   };
 }
 

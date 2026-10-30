@@ -6,9 +6,9 @@
  * The server never sends text: every error is `{key, ...values}` and every
  * notice is `{type, ...values}`; clients translate them (tr / en).
  */
-import type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId, TimerConfig } from '@ada/game-core';
+import type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId, Team, TimerConfig } from '@ada/game-core';
 
-export type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId, TimerConfig };
+export type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves, RoleId, Team, TimerConfig };
 
 /**
  * Bumped whenever client and server stop understanding each other. The client
@@ -20,7 +20,12 @@ export type { Action, GameError, GameEvent, GameMode, GameView, Hand, LegalMoves
  * 3: custom mode and the timed mode. `lobby:setMode` carries a target score, `lobby:setTimer` is new, the lobby view tells the target
  * score and the timer, `GamePayload` carries `timerClock`, and the game view has `winners` (a list) in place of `winner`.
  */
-export const PROTOCOL_VERSION = 3;
+/**
+ * 4: the team mode (fixed 2v2, summed points). `lobby:setTeamMode` and `lobby:setTeam` are new, the lobby view tells `teamMode` and every
+ * player's `team`, the game view has `teamMode`, `teamTarget`, `teamPoints` and every player's `team`, the `teamGift` action and the
+ * `teamGifted` event are new, the legal moves list `teamGiftTargets`, and `winners` can hold a whole team (two players, or all four when level).
+ */
+export const PROTOCOL_VERSION = 4;
 
 export const ROOM_CODE_LENGTH = 4;
 export const NAME_MAX_LENGTH = 24;
@@ -48,6 +53,8 @@ export const ERROR_KEYS = [
   'badMode',
   'badTarget',
   'badTimer',
+  'badTeams',
+  'teamFull',
   'needMorePlayers',
   'game',
 ] as const;
@@ -72,6 +79,8 @@ export interface LobbyPlayer {
   role: RoleId | null;
   connected: boolean;
   host: boolean;
+  /** team mode: the team this player picked; null = not chosen (always null outside the team mode) */
+  team: Team | null;
 }
 
 export interface LobbyView {
@@ -85,6 +94,8 @@ export interface LobbyView {
   timer: TimerConfig | null;
   /** the limits the host may pick, in seconds: the lists of the rules (a test server may add values) */
   timerChoices: { turnSeconds: number[]; gameSeconds: number[] };
+  /** the team mode (fixed 2v2, needs exactly 4 players): off by default */
+  teamMode: boolean;
   phase: RoomPhase;
   minPlayers: number;
   maxPlayers: number;
@@ -164,6 +175,10 @@ export interface ClientToServerEvents {
   'lobby:setMode': (p: { mode: GameMode; targetScore?: number }, ack: (r: Ack) => void) => void;
   /** the host switches the timed mode on (with the limits) or off (`null`) */
   'lobby:setTimer': (p: { timer: TimerConfig | null }, ack: (r: Ack) => void) => void;
+  /** the host switches the team mode on or off; either way every pick of a team is cleared */
+  'lobby:setTeamMode': (p: { on: boolean }, ack: (r: Ack) => void) => void;
+  /** a player picks their own team (at most two per team), or `null` to step out of it */
+  'lobby:setTeam': (p: { team: Team | null }, ack: (r: Ack) => void) => void;
   'lobby:start': (p: object, ack: (r: Ack) => void) => void;
   'lobby:reset': (p: object, ack: (r: Ack) => void) => void;
   'game:action': (action: Action, ack: (r: Ack) => void) => void;
@@ -185,6 +200,6 @@ export interface ServerToClientEvents {
 }
 
 export const CLIENT_EVENTS = [
-  'identity:hello', 'room:create', 'room:join', 'room:leave', 'lobby:setName', 'lobby:setRole', 'lobby:setMode', 'lobby:setTimer', 'lobby:start',
+  'identity:hello', 'room:create', 'room:join', 'room:leave', 'lobby:setName', 'lobby:setRole', 'lobby:setMode', 'lobby:setTimer', 'lobby:setTeamMode', 'lobby:setTeam', 'lobby:start',
   'lobby:reset', 'game:action', 'game:legal', 'game:preview',
 ] as const satisfies readonly (keyof ClientToServerEvents)[];
