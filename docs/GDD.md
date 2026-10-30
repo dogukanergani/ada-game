@@ -1,4 +1,4 @@
-# Ada: Oyun Tasarım Dokümanı (GDD) v0.7
+# Ada: Oyun Tasarım Dokümanı (GDD) v0.10
 
 22 Ekim 2026
 
@@ -211,6 +211,13 @@ Her oyuncu lobide bir rol seçer, seçmeyene kalan rollerden biri rastgele veril
 
 Sırası gelen oyuncu hedef puana ulaştığı anda oyunu kazanır. Puan yalnızca kendi turunda kontrol edilir; rakibin turunda hedefe ulaşan oyuncu (ör. yolu kesilince en uzun yolu alan), kendi turu başlar başlamaz kazanır. Oyun modu oda kurulurken seçilir: Standart oyunda hedef 10 puan, Kısa oyunda 7 puandır; kısa oyunda ayrıca kaynak arzı ve haritadaki bölge sayısı azalır (banka stoğu 19 yerine 14, harita 19 yerine 14 bölge). Üçüncü bir seçenek olan Özel modda hedef puan 5 ile 15 arasında serbestçe seçilir; harita ve banka stoğu yalnızca oyuncu sayısına göre belirlenir, Özel modda değişmez.
 
+**Takımlı mod (isteğe bağlı, sabit 2v2).** Oda kurulurken açılabilir; açıldığında oda tam 4 oyuncu gerektirir ve iki sabit, eşit büyüklükte takıma ayrılır (lobide atanır). Takım puanları toplanır: takımın toplam puanı seçili modun hedefinin iki katına (Standart 20, Kısa 14, Özel seçilen değerin iki katı) ulaştığında takım kazanır; kazanma kontrolü, takım üyelerinden birinin kendi turu başında ya da hamlesinde yapılır. Gizli zafer puanı kartları her oyuncunun kendi toplamına eklenir, oyun bitince tüm kartlar açılır. Oyun sonu ekranında kazanan takımın iki üyesi birlikte gösterilir.
+
+- **Takım içi hediye:** Takım arkadaşları birbirine istedikleri an, sırası kimde olursa olsun, onay beklemeden kaynak gönderebilir (anlık transfer, normal takas teklifi değil). Sınır yok, turda bir kez sınırı da yok.
+- **Rakip takımla takas:** Normal kurallarla aynıdır, yalnızca sırası gelen oyuncu teklif verir.
+- **Haydut ve yıkım koruması:** Haydut takım arkadaşının bölgesinden kart çalamaz (komşu sayılmaz). Asker, takım arkadaşının yolunu, yerleşimini ya da şehrini yıkım hedefi olarak seçemez.
+- **Zamanlı modla birlikte:** Oyun süresi dolunca en yüksek takım toplamına sahip takım kazanır; takımlar eşitse her iki takımın dört oyuncusu da birlikte kazanan ilan edilir.
+
 **Zamanlı mod (isteğe bağlı).** Oda kurulurken, seçilen modun yanında oda sahibi zamanlı modu açabilir: bir tur süresi (60, 90, 120, 150 ya da 180 saniye) ve bir toplam oyun süresi (30, 60 ya da 90 dakika) seçilir. Tur süresi dolan oyuncunun turu otomatik biter; o ana kadar yaptığı inşa ve takaslar kalır, kaynakları elinde durur. Toplam oyun süresi dolunca oyun hemen biter; o anda en yüksek puana sahip oyuncu kazanır. Puan eşitse birden fazla oyuncu birlikte kazanan ilan edilir. Zamanlı mod varsayılan olarak kapalıdır.
 
 | Kaynak | Puan |
@@ -233,7 +240,7 @@ Her oyun bir odada geçer; oda, oda sahibinin kurduğu 4 harfli bir kodla bulunu
 | --- | --- |
 | Katılım | Kod + isim (misafir) ya da hesapla giriş. Oyun başladıktan sonra yeni oyuncu giremez; oyundan "ayrılan" oyuncu koduyla geri dönebilir |
 | Kimlik | Sunucu imzalı bir kimlik anahtarı verir (istemci kendi kimliğini uyduramaz), tarayıcıda saklanır; aynı kimlikle girince oyuncu yerine döner, ikinci sekme ilkini düşürür; hesaplı oyuncuda kimlik hesaba bağlıdır |
-| Lobi | Oyuncular rol seçer; oda sahibi oyun modunu (standart ya da kısa) seçip başlatır. Oda sahibi çıkarsa devir otomatik olur |
+| Lobi | Oyuncular rol seçer; oda sahibi oyun modunu (standart, kısa ya da özel) ve isteğe bağlı takımlı modu seçip başlatır. Takımlı mod açıksa tam 4 oyuncu ve iki eşit takım ataması gerekir. Oda sahibi çıkarsa devir otomatik olur |
 | Gizli bilgi | Rakibin eli ve deste içeriği asla istemciye gitmez, yalnızca kart sayısı gider |
 | Hile önleme | Zar, deste ve tüm kural kontrolü sunucuda; gelen veri her seferinde doğrulanır; bağlantı başına hız sınırı vardır |
 | Kopan oyuncu | Oyun duraklamaz, sırası gelince diğerleri bekler (ilk sürüm). Kopan oyuncu yaklaşık 20 saniyede çevrimdışı görünür; sırası ondaysa bir bant "bağlantısı koptu, bekleniyor" der |
@@ -269,26 +276,26 @@ Tahta bir **deniz haritası** gibi görünür: koyu deniz zemini, ince enlem-boy
 - **Giriş:** isim, oda kur, kodla katıl.
 - **Lobi:** oda kodu, oyuncular, rol kartları.
 - **Oyun:** ortada tahta, tahtanın etrafında oyuncu koltukları (avatar, zafer puanı, kart sayısı), üstte son olay, altta el ve eylemler; masaüstünde sağda yan panel ve günlük. Koltuklarda yalnızca toplam kart sayısı görünür, rakibin hangi kaynaklara sahip olduğu gizli kalır.
-- **Alt sayfalar:** inşa (yol/yerleşim/şehir tek bir alt menüde, her birinin yanında maliyet ve kısa kural açıklaması), takas (yan yana: solda verirsin, sağda alırsın), maliyet tablosu, kart atma, kart çalma, günlük, oyun sonu.
+- **Alt sayfalar:** inşa (yol/yerleşim/şehir tek bir alt menüde, her birinin yanında maliyet ve kısa kural açıklaması), takas (yan yana: solda verirsin, sağda alırsın), maliyet tablosu, kart atma, kart çalma, günlük, oyun sonu, **Ayarlar** (dil seçimi, ses efekti aç/kapa ve düzeyi, müzik aç/kapa — asset eklenene kadar "yakında" —, titreşim aç/kapa ve tam ekran aç/kapa — ikisi de yalnızca tarayıcı destekliyorsa görünür —, "Bu cihazdaki kimliği unut / yeniden başla"), **Kurallar** (oyun döngüsü, 5 rol, gelişim kartları, puanlama ve maliyetler; ana ekrandan açılınca temel maliyetler, maç içinden açılınca de aynı temel maliyetler ve zorunlu sheet'ler açıkken kendiliğinden kapanır).
 
 **Etkileşim ilkeleri**
 
 - Mobil öncelikli: dokunma hedefleri en az 44 px, tek elle ulaşılabilir eylem düğmeleri.
 - Her arazi renkle ve desenle ayırt edilir; renk körlüğüne karşı yalnızca renge güvenilmez.
-- Klavye odağı görünür, hareket azaltma ayarına uyulur.
+- Klavye odağı görünür; animasyonlar Ayarlar'daki "Animasyonları kapat" anahtarıyla elle kapatılabilir. Tarayıcı destekliyorsa Ayarlar'dan tam ekran moduna geçilebilir (masaüstü ve tablette faydalı; mobil PWA zaten tam ekran açılır).
 - Hata mesajı ne olduğunu ve ne yapılacağını söyler, özür dilemez.
 - Oyuncu rolüne göre hesaplanmış maliyetler her zaman erişilebilir. Pasif düğme dokunulabilir kalır ve neden pasif olduğunu söyler (ör. sıra sende değil, 2 cevher eksik).
 
 ## Ses, animasyon ve oyun hissi
 
-Hedef, hareketin yalnızca olanı anlatması: oyuncunun yaptığı eyleme cevap veren kısa animasyonlar olur, kendiliğinden oynayan süs hareketi olmaz. Ses efektleri ve müzik oyunun parçasıdır; çekirdek ve istemci hazır olduktan sonra eklenir.
+Hedef, hareketin yalnızca olanı anlatması: oyuncunun yaptığı eyleme cevap veren kısa animasyonlar olur, kendiliğinden oynayan süs hareketi olmaz. Ses efektleri kod ile üretilen kısa tonlardır (osilatör tabanlı, dışarıdan ses dosyası yok): zar atma, inşa/yıkım onayı, kaynak kazanma, takas kabul, hata/pasif tıklama, sıra bildirimi. Arka plan müziği için altyapı hazırdır ama bir ses dosyası eklenene kadar düğme "yakında" olarak pasif kalır.
 
 - **Zar:** tahtada iki zar olarak kısa (yaklaşık bir saniye) yuvarlanır; durana kadar toplam yazılmaz, sonra köşede durağan kalır. Sonucu animasyon değil sunucu belirler; sayfa yenilenince zarlar animasyonsuz gelir (Aşama 4).
-- **Üretim:** Sayısı tutan bölgelerin jetonu kısa süre vurgulanır, haydutla engelli bölge işaretlenir; kazanılan kaynak, bölgeden kazanan oyuncunun koltuğuna kısa bir uçuşla gider ve kendi elindeki kaynak çipinde kazanç "+1" olarak belirir. Kimin ne aldığı günlükte yazılır. Hareket azaltma ayarı açıksa uçuş olmadan anında güncellenir.
+- **Üretim:** Sayısı tutan bölgelerin jetonu kısa süre vurgulanır, haydutla engelli bölge işaretlenir; kazanılan kaynak, bölgeden kazanan oyuncunun koltuğuna kısa bir uçuşla gider ve kendi elindeki kaynak çipinde kazanç "+1" olarak belirir. Kimin ne aldığı günlükte yazılır. "Animasyonları kapat" anahtarı açıksa uçuş olmadan anında güncellenir.
 - **İnşa:** Yapı yerine oturur, kısa bir vurgu halkası.
 - **Sıra bildirimi:** Sıra sende olduğunda titreşim ve ses (uygulamada Capacitor ile, tarayıcıda sekme başlığı).
-- **Ses:** Efektler kısık ve sade kalır, müzik arka planda çalar; ikisi ayrı ayrı kapatılır. Varsayılan olarak ikisi de açıktır.
-- **Hareket azaltma:** Sistem ayarı açıksa tüm animasyonlar kapanır.
+- **Ses:** Efektler kısık ve sade kalır; ses efekti ve müzik Ayarlar'da ayrı ayrı açılıp kapatılır, her birinin kendi ses düzeyi kaydırıcısı vardır. Ses efekti varsayılan olarak açık, düzeyi tercih cihazda saklanır.
+- **Animasyonlar:** zar, üretim uçuşu ve vurgular varsayılan olarak her zaman açıktır; tarayıcının sistem "hareket azaltma" ayarını otomatik izlemez. Ayarlar'da elle bir "Animasyonları kapat" anahtarı vardır, kapatılınca tüm animasyonlar anında durur ve sonuçlar doğrudan görünür. Bu, standart erişilebilirlik önerisinin (sistem ayarına otomatik uyma) bilinçli bir sapmasıdır: hareket hassasiyeti olan oyuncuların animasyonu elle kapatması gerekir.
 
 ## Denge ve test planı
 
@@ -325,7 +332,7 @@ Her kural değişikliği, aşağıdaki katmanların hepsinden geçmeden bitmiş 
 
 Kapılar aşamaları sıraya koyar: çekirdek testlerden geçmeden sunucuya, telefonda oyun bitmeden kapalı teste, roller dengelenmeden yayına geçilmez.
 
-**Durum (25 Ekim 2026):** 1-4. aşamalar tamamlandı. Kapalı test başladı: 2 oyunculu, Özel modda (5 puan) ilk tam oyun oynanıp bitirildi. Zamanlı mod, Özel hedef puan (v0.5), inşa alt menüsü, üretim uçuş animasyonu, karşılıksız takas (v0.6) eklendi. Barındırma kararı verildi: Fly.io (v0.7); yayına hazırlık başlıyor. Bekleyen: 3+ oyunculu tam oyun, Asker ve Bilge dengesinin gerçek oyunla doğrulanması.
+**Durum (25 Ekim 2026):** 1-4. aşamalar tamamlandı. Kapalı test başladı: 2 oyunculu, Özel modda (5 puan) ilk tam oyun oynanıp bitirildi. Zamanlı mod, Özel hedef puan (v0.5), inşa alt menüsü, üretim uçuş animasyonu, karşılıksız takas (v0.6) eklendi. Barındırma kararı verildi ve Fly.io'ya yayınlandı (v0.7): https://ada-game.fly.dev. Ses efektleri, genişletilmiş Ayarlar ve tam ekran modu tamamlandı (v0.8). Animasyonlar artık varsayılan açık, sistem ayarını otomatik izlemiyor; elle "Animasyonları kapat" ile kapatılır (v0.9). Takımlı mod (sabit 2v2, toplam puan) tasarlandı (v0.10), uygulama sırada. Sırada: hazır emoji tepkileri, özel haritalar (Türkiye haritası). Bekleyen: 3+ oyunculu tam oyun, Asker ve Bilge dengesinin gerçek oyunla doğrulanması.
 
 **Sonraki sürümler (haritada yok):** hesap sistemi (e-posta, Google, Apple; arkadaş listesi ve istatistikler), ses ve müzik, özel haritalar ve sıralamalı online eşleştirme. Çeviri altyapısı ise haritadaki ilk aşamadan itibaren kurulur.
 
